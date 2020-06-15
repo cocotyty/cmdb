@@ -185,7 +185,7 @@ type ObjectRelation struct {
 	// Default: CURRENT_TIMESTAMP
 	CreateTime time.Time `db:"create_time"`
 	// Default: CURRENT_TIMESTAMP
-	UpdateTime time.Time  `db:"update_time"`
+	UpdateTime *time.Time `db:"update_time"`
 	DeleteTime *time.Time `db:"delete_time"`
 }
 
@@ -196,7 +196,7 @@ type DeletedObjectRelation struct {
 	// Default: CURRENT_TIMESTAMP
 	CreateTime time.Time `db:"create_time"`
 	// Default: CURRENT_TIMESTAMP
-	UpdateTime time.Time  `db:"update_time"`
+	UpdateTime *time.Time `db:"update_time"`
 	DeleteTime *time.Time `db:"delete_time"`
 }
 

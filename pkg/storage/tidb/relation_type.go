@@ -387,3 +387,28 @@ type IDName struct {
 	ID   int    `db:"id"`
 	Name string `db:"name"`
 }
+
+func (s *Storage) DeleteRelationType(ctx context.Context, from string, to string, name string) (*v1.RelationType, error) {
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return nil, internalError(err)
+	}
+	defer tx.Rollback()
+	objectRelationType, err := s.getDatabaseRelationType(ctx, tx, name, from, to)
+	if err != nil {
+		return nil, err
+	}
+	relationType, err := s.getRelationType(ctx, tx, name, from, to)
+	if err != nil {
+		return nil, err
+	}
+	_, err = tx.ExecContext(ctx, "update object_relation_type set delete_time = now() where id = ? ", objectRelationType.ID)
+	if err != nil {
+		return nil, internalError(err)
+	}
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+	return relationType, nil
+}

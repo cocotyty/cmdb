@@ -30,3 +30,11 @@ func internalError(err error) error {
 func notFound(fmt string, args ...interface{}) error {
 	return status.Newf(codes.NotFound, fmt, args...).Err()
 }
+
+func unavailable(fmt string, args ...interface{}) error {
+	return status.Newf(codes.Unavailable, fmt, args...).Err()
+}
+
+func aborted(fmt string, args ...interface{}) error {
+	return status.Newf(codes.Aborted, fmt, args...).Err()
+}
