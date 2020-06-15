@@ -35,6 +35,7 @@ type Storage interface {
 	ListObjectTypes(ctx context.Context, request *v1.ListObjectTypesRequest) (list []*v1.ObjectType, err error)
 	UpdateObjectType(ctx context.Context, paths []string, typ *v1.ObjectType) (n *v1.ObjectType, err error)
 	DeleteObjectType(ctx context.Context, name string) (n *v1.ObjectType, err error)
+
 }
 
 type ObjectUpdateOption struct {

@@ -427,6 +427,38 @@
           "Objects"
         ]
       }
+    },
+    "/v1/api/relation_types": {
+      "post": {
+        "operationId": "RelationTypes_Create",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RelationType"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1RelationType"
+            }
+          }
+        ],
+        "tags": [
+          "RelationTypes"
+        ]
+      }
     }
   },
   "definitions": {
@@ -698,6 +730,41 @@
         },
         "type": {
           "$ref": "#/definitions/v1WatchEventType"
+        }
+      }
+    },
+    "v1RelationType": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "metas": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1ObjectMeta"
+          }
+        },
+        "create_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "update_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "delete_time": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },

@@ -21,6 +21,8 @@ import (
 	model "github.com/zhihu/cmdb/pkg/model"
 )
 
+func noop(_ interface{}) {}
+
 type RichObjectMeta struct {
 	model.ObjectMeta
 	ObjectType *RichObjectType
@@ -63,6 +65,75 @@ func (t *ObjectMetaTable) FilterByTypeID(TypeID int) (rows []*RichObjectMeta) {
 
 func (t *ObjectMetaTable) GetByTypeName(TypeID int, Name string) (row *RichObjectMeta, ok bool) {
 	row, ok = t.TypeName[IndexObjectMetaTypeName{TypeID: TypeID, Name: Name}]
+	return
+}
+
+type RichObjectRelationMeta struct {
+	model.ObjectRelationMeta
+	ObjectRelationType *RichObjectRelationType
+}
+
+type ObjectRelationMetaTable struct {
+	ID             map[IndexObjectRelationMetaID]*RichObjectRelationMeta
+	RelationTypeID map[IndexObjectRelationMetaRelationTypeID][]*RichObjectRelationMeta
+}
+
+func (t *ObjectRelationMetaTable) Init() {
+	t.ID = map[IndexObjectRelationMetaID]*RichObjectRelationMeta{}
+	t.RelationTypeID = map[IndexObjectRelationMetaRelationTypeID][]*RichObjectRelationMeta{}
+
+}
+
+type IndexObjectRelationMetaID struct {
+	ID int
+}
+
+type IndexObjectRelationMetaRelationTypeID struct {
+	RelationTypeID int
+}
+
+func (t *ObjectRelationMetaTable) GetByID(ID int) (row *RichObjectRelationMeta, ok bool) {
+	row, ok = t.ID[IndexObjectRelationMetaID{ID: ID}]
+	return
+}
+func (t *ObjectRelationMetaTable) FilterByRelationTypeID(RelationTypeID int) (rows []*RichObjectRelationMeta) {
+	rows, _ = t.RelationTypeID[IndexObjectRelationMetaRelationTypeID{RelationTypeID: RelationTypeID}]
+	return
+}
+
+type RichObjectRelationType struct {
+	model.ObjectRelationType
+	// has_many
+	ObjectRelationMeta map[IndexObjectRelationMetaID]*RichObjectRelationMeta
+}
+
+type ObjectRelationTypeTable struct {
+	ID        map[IndexObjectRelationTypeID]*RichObjectRelationType
+	LogicalID map[IndexObjectRelationTypeLogicalID]*RichObjectRelationType
+}
+
+func (t *ObjectRelationTypeTable) Init() {
+	t.ID = map[IndexObjectRelationTypeID]*RichObjectRelationType{}
+	t.LogicalID = map[IndexObjectRelationTypeLogicalID]*RichObjectRelationType{}
+
+}
+
+type IndexObjectRelationTypeID struct {
+	ID int
+}
+
+type IndexObjectRelationTypeLogicalID struct {
+	FromTypeID int
+	ToTypeID   int
+	Name       string
+}
+
+func (t *ObjectRelationTypeTable) GetByID(ID int) (row *RichObjectRelationType, ok bool) {
+	row, ok = t.ID[IndexObjectRelationTypeID{ID: ID}]
+	return
+}
+func (t *ObjectRelationTypeTable) GetByLogicalID(FromTypeID int, ToTypeID int, Name string) (row *RichObjectRelationType, ok bool) {
+	row, ok = t.LogicalID[IndexObjectRelationTypeLogicalID{FromTypeID: FromTypeID, ToTypeID: ToTypeID, Name: Name}]
 	return
 }
 
@@ -197,6 +268,10 @@ func (t *ObjectTypeTable) GetByName(Name string) (row *RichObjectType, ok bool) 
 type Database struct {
 	ObjectMetaTable ObjectMetaTable
 
+	ObjectRelationMetaTable ObjectRelationMetaTable
+
+	ObjectRelationTypeTable ObjectRelationTypeTable
+
 	ObjectStateTable ObjectStateTable
 
 	ObjectStatusTable ObjectStatusTable
@@ -206,6 +281,8 @@ type Database struct {
 
 func (d *Database) Init() {
 	d.ObjectMetaTable.Init()
+	d.ObjectRelationMetaTable.Init()
+	d.ObjectRelationTypeTable.Init()
 	d.ObjectStateTable.Init()
 	d.ObjectStatusTable.Init()
 	d.ObjectTypeTable.Init()
@@ -276,6 +353,7 @@ func (d *Database) DeleteObjectMeta(row *model.ObjectMeta) (ok bool) {
 	if !ok {
 		return false
 	}
+	noop(richRow)
 
 	{
 		var index = IndexObjectMetaID{row.ID}
@@ -305,6 +383,172 @@ func (d *Database) DeleteObjectMeta(row *model.ObjectMeta) (ok bool) {
 	{
 		if richRow.ObjectType != nil {
 			delete(richRow.ObjectType.ObjectMeta, IndexObjectMetaID{row.ID})
+		}
+	}
+
+	return true
+}
+func (d *Database) InsertObjectRelationMeta(row *model.ObjectRelationMeta) (ok bool) {
+	if row.DeleteTime != nil {
+		return false
+	}
+	var richRow = &RichObjectRelationMeta{
+		ObjectRelationMeta: *row,
+	}
+
+	{
+		var index = IndexObjectRelationMetaID{row.ID}
+		_, ok := d.ObjectRelationMetaTable.ID[index]
+		if ok {
+			return false
+		}
+		d.ObjectRelationMetaTable.ID[index] = richRow
+
+	}
+
+	{
+		var index = IndexObjectRelationMetaRelationTypeID{row.RelationTypeID}
+
+		list := d.ObjectRelationMetaTable.RelationTypeID[index]
+		list = append(list, richRow)
+		d.ObjectRelationMetaTable.RelationTypeID[index] = list
+	}
+
+	{ //belongs_to
+		richRow.ObjectRelationType, _ = d.ObjectRelationTypeTable.GetByID(row.RelationTypeID)
+		if richRow.ObjectRelationType != nil {
+			richRow.ObjectRelationType.ObjectRelationMeta[IndexObjectRelationMetaID{row.ID}] = richRow
+		}
+	}
+
+	return true
+}
+
+func (d *Database) UpdateObjectRelationMeta(row *model.ObjectRelationMeta) (ok bool) {
+	if row.DeleteTime != nil {
+		return d.DeleteObjectRelationMeta(row)
+	}
+	var index = IndexObjectRelationMetaID{row.ID}
+	origin, ok := d.ObjectRelationMetaTable.ID[index]
+	if !ok {
+		return d.InsertObjectRelationMeta(row)
+	}
+	origin.ObjectRelationMeta = *row
+	return true
+}
+
+func (d *Database) DeleteObjectRelationMeta(row *model.ObjectRelationMeta) (ok bool) {
+	var index = IndexObjectRelationMetaID{row.ID}
+	richRow, ok := d.ObjectRelationMetaTable.ID[index]
+	if !ok {
+		return false
+	}
+	noop(richRow)
+
+	{
+		var index = IndexObjectRelationMetaID{row.ID}
+		delete(d.ObjectRelationMetaTable.ID, index)
+
+	}
+
+	{
+		var index = IndexObjectRelationMetaRelationTypeID{row.RelationTypeID}
+
+		list := d.ObjectRelationMetaTable.RelationTypeID[index]
+		var newList = make([]*RichObjectRelationMeta, 0, len(list)-1)
+		for _, item := range list {
+			if item.ObjectRelationMeta.ID != row.ID {
+				newList = append(newList, item)
+			}
+		}
+		d.ObjectRelationMetaTable.RelationTypeID[index] = newList
+	}
+
+	{
+		if richRow.ObjectRelationType != nil {
+			delete(richRow.ObjectRelationType.ObjectRelationMeta, IndexObjectRelationMetaID{row.ID})
+		}
+	}
+
+	return true
+}
+func (d *Database) InsertObjectRelationType(row *model.ObjectRelationType) (ok bool) {
+	if row.DeleteTime != nil {
+		return false
+	}
+	var richRow = &RichObjectRelationType{
+		ObjectRelationType: *row,
+		ObjectRelationMeta: map[IndexObjectRelationMetaID]*RichObjectRelationMeta{},
+	}
+
+	{
+		var index = IndexObjectRelationTypeID{row.ID}
+		_, ok := d.ObjectRelationTypeTable.ID[index]
+		if ok {
+			return false
+		}
+		d.ObjectRelationTypeTable.ID[index] = richRow
+
+	}
+
+	{
+		var index = IndexObjectRelationTypeLogicalID{row.FromTypeID, row.ToTypeID, row.Name}
+		_, ok := d.ObjectRelationTypeTable.LogicalID[index]
+		if ok {
+			return false
+		}
+		d.ObjectRelationTypeTable.LogicalID[index] = richRow
+
+	}
+
+	{ // has_many
+		richRow.ObjectRelationMeta = map[IndexObjectRelationMetaID]*RichObjectRelationMeta{}
+		var list = d.ObjectRelationMetaTable.FilterByRelationTypeID(row.ID)
+		for _, item := range list {
+			item.ObjectRelationType = richRow
+			richRow.ObjectRelationMeta[IndexObjectRelationMetaID{ID: item.ID}] = item
+		}
+	}
+
+	return true
+}
+
+func (d *Database) UpdateObjectRelationType(row *model.ObjectRelationType) (ok bool) {
+	if row.DeleteTime != nil {
+		return d.DeleteObjectRelationType(row)
+	}
+	var index = IndexObjectRelationTypeID{row.ID}
+	origin, ok := d.ObjectRelationTypeTable.ID[index]
+	if !ok {
+		return d.InsertObjectRelationType(row)
+	}
+	origin.ObjectRelationType = *row
+	return true
+}
+
+func (d *Database) DeleteObjectRelationType(row *model.ObjectRelationType) (ok bool) {
+	var index = IndexObjectRelationTypeID{row.ID}
+	richRow, ok := d.ObjectRelationTypeTable.ID[index]
+	if !ok {
+		return false
+	}
+	noop(richRow)
+
+	{
+		var index = IndexObjectRelationTypeID{row.ID}
+		delete(d.ObjectRelationTypeTable.ID, index)
+
+	}
+
+	{
+		var index = IndexObjectRelationTypeLogicalID{row.FromTypeID, row.ToTypeID, row.Name}
+		delete(d.ObjectRelationTypeTable.LogicalID, index)
+
+	}
+
+	{
+		for _, item := range richRow.ObjectRelationMeta {
+			item.ObjectRelationType = nil
 		}
 	}
 
@@ -375,6 +619,7 @@ func (d *Database) DeleteObjectState(row *model.ObjectState) (ok bool) {
 	if !ok {
 		return false
 	}
+	noop(richRow)
 
 	{
 		var index = IndexObjectStateID{row.ID}
@@ -484,6 +729,7 @@ func (d *Database) DeleteObjectStatus(row *model.ObjectStatus) (ok bool) {
 	if !ok {
 		return false
 	}
+	noop(richRow)
 
 	{
 		var index = IndexObjectStatusID{row.ID}
@@ -594,6 +840,7 @@ func (d *Database) DeleteObjectType(row *model.ObjectType) (ok bool) {
 	if !ok {
 		return false
 	}
+	noop(richRow)
 
 	{
 		var index = IndexObjectTypeID{row.ID}
@@ -633,6 +880,24 @@ func (d *Database) OnEvents(transaction []cdc.Event) {
 				d.UpdateObjectMeta(row)
 			case cdc.Delete:
 				d.DeleteObjectMeta(row)
+			}
+		case *model.ObjectRelationMeta:
+			switch event.Type {
+			case cdc.Create:
+				d.InsertObjectRelationMeta(row)
+			case cdc.Update:
+				d.UpdateObjectRelationMeta(row)
+			case cdc.Delete:
+				d.DeleteObjectRelationMeta(row)
+			}
+		case *model.ObjectRelationType:
+			switch event.Type {
+			case cdc.Create:
+				d.InsertObjectRelationType(row)
+			case cdc.Update:
+				d.UpdateObjectRelationType(row)
+			case cdc.Delete:
+				d.DeleteObjectRelationType(row)
 			}
 		case *model.ObjectState:
 			switch event.Type {

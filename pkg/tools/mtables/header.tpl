@@ -5,3 +5,5 @@ import(
     {{$k}} "{{$v}}"
 {{end}}
 )
+
+func noop(_ interface{}){}

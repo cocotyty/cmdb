@@ -1209,6 +1209,259 @@ func (x *ObjectTypeUpdateRequest) GetUpdateMask() *field_mask.FieldMask {
 	return nil
 }
 
+type RelationType struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	From        string                 `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
+	To          string                 `protobuf:"bytes,3,opt,name=to,proto3" json:"to,omitempty"`
+	Description string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Metas       map[string]*ObjectMeta `protobuf:"bytes,5,rep,name=metas,proto3" json:"metas,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	CreateTime  *timestamp.Timestamp   `protobuf:"bytes,6,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	UpdateTime  *timestamp.Timestamp   `protobuf:"bytes,7,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	DeleteTime  *timestamp.Timestamp   `protobuf:"bytes,8,opt,name=delete_time,json=deleteTime,proto3" json:"delete_time,omitempty"`
+}
+
+func (x *RelationType) Reset() {
+	*x = RelationType{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_pkg_api_v1_service_proto_msgTypes[16]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RelationType) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RelationType) ProtoMessage() {}
+
+func (x *RelationType) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_api_v1_service_proto_msgTypes[16]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RelationType.ProtoReflect.Descriptor instead.
+func (*RelationType) Descriptor() ([]byte, []int) {
+	return file_pkg_api_v1_service_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *RelationType) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *RelationType) GetFrom() string {
+	if x != nil {
+		return x.From
+	}
+	return ""
+}
+
+func (x *RelationType) GetTo() string {
+	if x != nil {
+		return x.To
+	}
+	return ""
+}
+
+func (x *RelationType) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *RelationType) GetMetas() map[string]*ObjectMeta {
+	if x != nil {
+		return x.Metas
+	}
+	return nil
+}
+
+func (x *RelationType) GetCreateTime() *timestamp.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *RelationType) GetUpdateTime() *timestamp.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+func (x *RelationType) GetDeleteTime() *timestamp.Timestamp {
+	if x != nil {
+		return x.DeleteTime
+	}
+	return nil
+}
+
+type ObjectReference struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Type string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+}
+
+func (x *ObjectReference) Reset() {
+	*x = ObjectReference{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_pkg_api_v1_service_proto_msgTypes[17]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ObjectReference) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ObjectReference) ProtoMessage() {}
+
+func (x *ObjectReference) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_api_v1_service_proto_msgTypes[17]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ObjectReference.ProtoReflect.Descriptor instead.
+func (*ObjectReference) Descriptor() ([]byte, []int) {
+	return file_pkg_api_v1_service_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ObjectReference) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *ObjectReference) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type Relation struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Relation   string                      `protobuf:"bytes,1,opt,name=relation,proto3" json:"relation,omitempty"`
+	From       *ObjectReference            `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
+	To         *ObjectReference            `protobuf:"bytes,3,opt,name=to,proto3" json:"to,omitempty"`
+	Metas      map[string]*ObjectMetaValue `protobuf:"bytes,6,rep,name=metas,proto3" json:"metas,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	CreateTime *timestamp.Timestamp        `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	UpdateTime *timestamp.Timestamp        `protobuf:"bytes,8,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	DeleteTime *timestamp.Timestamp        `protobuf:"bytes,9,opt,name=delete_time,json=deleteTime,proto3" json:"delete_time,omitempty"`
+}
+
+func (x *Relation) Reset() {
+	*x = Relation{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_pkg_api_v1_service_proto_msgTypes[18]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Relation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Relation) ProtoMessage() {}
+
+func (x *Relation) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_api_v1_service_proto_msgTypes[18]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Relation.ProtoReflect.Descriptor instead.
+func (*Relation) Descriptor() ([]byte, []int) {
+	return file_pkg_api_v1_service_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *Relation) GetRelation() string {
+	if x != nil {
+		return x.Relation
+	}
+	return ""
+}
+
+func (x *Relation) GetFrom() *ObjectReference {
+	if x != nil {
+		return x.From
+	}
+	return nil
+}
+
+func (x *Relation) GetTo() *ObjectReference {
+	if x != nil {
+		return x.To
+	}
+	return nil
+}
+
+func (x *Relation) GetMetas() map[string]*ObjectMetaValue {
+	if x != nil {
+		return x.Metas
+	}
+	return nil
+}
+
+func (x *Relation) GetCreateTime() *timestamp.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *Relation) GetUpdateTime() *timestamp.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+func (x *Relation) GetDeleteTime() *timestamp.Timestamp {
+	if x != nil {
+		return x.DeleteTime
+	}
+	return nil
+}
+
 var File_pkg_api_v1_service_proto protoreflect.FileDescriptor
 
 var file_pkg_api_v1_service_proto_rawDesc = []byte{
@@ -1386,7 +1639,69 @@ var file_pkg_api_v1_service_proto_rawDesc = []byte{
 	0x0a, 0x0b, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x6d, 0x61, 0x73, 0x6b, 0x18, 0x02, 0x20,
 	0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f,
 	0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x4d, 0x61, 0x73, 0x6b, 0x52,
-	0x0a, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4d, 0x61, 0x73, 0x6b, 0x2a, 0x3d, 0x0a, 0x09, 0x56,
+	0x0a, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4d, 0x61, 0x73, 0x6b, 0x22, 0xba, 0x03, 0x0a, 0x0c,
+	0x52, 0x65, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x12, 0x12, 0x0a, 0x04,
+	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65,
+	0x12, 0x12, 0x0a, 0x04, 0x66, 0x72, 0x6f, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04,
+	0x66, 0x72, 0x6f, 0x6d, 0x12, 0x0e, 0x0a, 0x02, 0x74, 0x6f, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x02, 0x74, 0x6f, 0x12, 0x20, 0x0a, 0x0b, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74,
+	0x69, 0x6f, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x64, 0x65, 0x73, 0x63, 0x72,
+	0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x40, 0x0a, 0x05, 0x6d, 0x65, 0x74, 0x61, 0x73, 0x18,
+	0x05, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2a, 0x2e, 0x7a, 0x68, 0x69, 0x68, 0x75, 0x2e, 0x63, 0x6d,
+	0x64, 0x62, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x6c, 0x61, 0x74, 0x69,
+	0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x2e, 0x4d, 0x65, 0x74, 0x61, 0x73, 0x45, 0x6e, 0x74, 0x72,
+	0x79, 0x52, 0x05, 0x6d, 0x65, 0x74, 0x61, 0x73, 0x12, 0x3b, 0x0a, 0x0b, 0x63, 0x72, 0x65, 0x61,
+	0x74, 0x65, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e,
+	0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e,
+	0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x0a, 0x63, 0x72, 0x65, 0x61, 0x74,
+	0x65, 0x54, 0x69, 0x6d, 0x65, 0x12, 0x3b, 0x0a, 0x0b, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x5f,
+	0x74, 0x69, 0x6d, 0x65, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f,
+	0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d,
+	0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x0a, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x54, 0x69,
+	0x6d, 0x65, 0x12, 0x3b, 0x0a, 0x0b, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x5f, 0x74, 0x69, 0x6d,
+	0x65, 0x18, 0x08, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
+	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74,
+	0x61, 0x6d, 0x70, 0x52, 0x0a, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x54, 0x69, 0x6d, 0x65, 0x1a,
+	0x57, 0x0a, 0x0a, 0x4d, 0x65, 0x74, 0x61, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a,
+	0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12,
+	0x33, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1d,
+	0x2e, 0x7a, 0x68, 0x69, 0x68, 0x75, 0x2e, 0x63, 0x6d, 0x64, 0x62, 0x2e, 0x61, 0x70, 0x69, 0x2e,
+	0x76, 0x31, 0x2e, 0x4f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x4d, 0x65, 0x74, 0x61, 0x52, 0x05, 0x76,
+	0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0x39, 0x0a, 0x0f, 0x4f, 0x62, 0x6a, 0x65,
+	0x63, 0x74, 0x52, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x74,
+	0x79, 0x70, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x12,
+	0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e,
+	0x61, 0x6d, 0x65, 0x22, 0xe5, 0x03, 0x0a, 0x08, 0x52, 0x65, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e,
+	0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x08, 0x72, 0x65, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x36, 0x0a, 0x04,
+	0x66, 0x72, 0x6f, 0x6d, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x22, 0x2e, 0x7a, 0x68, 0x69,
+	0x68, 0x75, 0x2e, 0x63, 0x6d, 0x64, 0x62, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x4f,
+	0x62, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x52, 0x04,
+	0x66, 0x72, 0x6f, 0x6d, 0x12, 0x32, 0x0a, 0x02, 0x74, 0x6f, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x22, 0x2e, 0x7a, 0x68, 0x69, 0x68, 0x75, 0x2e, 0x63, 0x6d, 0x64, 0x62, 0x2e, 0x61, 0x70,
+	0x69, 0x2e, 0x76, 0x31, 0x2e, 0x4f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x66, 0x65, 0x72,
+	0x65, 0x6e, 0x63, 0x65, 0x52, 0x02, 0x74, 0x6f, 0x12, 0x3c, 0x0a, 0x05, 0x6d, 0x65, 0x74, 0x61,
+	0x73, 0x18, 0x06, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x26, 0x2e, 0x7a, 0x68, 0x69, 0x68, 0x75, 0x2e,
+	0x63, 0x6d, 0x64, 0x62, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x6c, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x4d, 0x65, 0x74, 0x61, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52,
+	0x05, 0x6d, 0x65, 0x74, 0x61, 0x73, 0x12, 0x3b, 0x0a, 0x0b, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65,
+	0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f,
+	0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69,
+	0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x0a, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x54,
+	0x69, 0x6d, 0x65, 0x12, 0x3b, 0x0a, 0x0b, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x74, 0x69,
+	0x6d, 0x65, 0x18, 0x08, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
+	0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73,
+	0x74, 0x61, 0x6d, 0x70, 0x52, 0x0a, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x54, 0x69, 0x6d, 0x65,
+	0x12, 0x3b, 0x0a, 0x0b, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18,
+	0x09, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d,
+	0x70, 0x52, 0x0a, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x54, 0x69, 0x6d, 0x65, 0x1a, 0x5c, 0x0a,
+	0x0a, 0x4d, 0x65, 0x74, 0x61, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b,
+	0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x38, 0x0a,
+	0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x22, 0x2e, 0x7a,
+	0x68, 0x69, 0x68, 0x75, 0x2e, 0x63, 0x6d, 0x64, 0x62, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31,
+	0x2e, 0x4f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x4d, 0x65, 0x74, 0x61, 0x56, 0x61, 0x6c, 0x75, 0x65,
+	0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x2a, 0x3d, 0x0a, 0x09, 0x56,
 	0x61, 0x6c, 0x75, 0x65, 0x54, 0x79, 0x70, 0x65, 0x12, 0x0a, 0x0a, 0x06, 0x53, 0x54, 0x52, 0x49,
 	0x4e, 0x47, 0x10, 0x00, 0x12, 0x0b, 0x0a, 0x07, 0x49, 0x4e, 0x54, 0x45, 0x47, 0x45, 0x52, 0x10,
 	0x01, 0x12, 0x0a, 0x0a, 0x06, 0x44, 0x4f, 0x55, 0x42, 0x4c, 0x45, 0x10, 0x02, 0x12, 0x0b, 0x0a,
@@ -1469,7 +1784,15 @@ var file_pkg_api_v1_service_proto_rawDesc = []byte{
 	0x69, 0x68, 0x75, 0x2e, 0x63, 0x6d, 0x64, 0x62, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e,
 	0x4f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x54, 0x79, 0x70, 0x65, 0x22, 0x23, 0x82, 0xd3, 0xe4, 0x93,
 	0x02, 0x1d, 0x12, 0x1b, 0x2f, 0x76, 0x31, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x6f, 0x62, 0x6a, 0x65,
-	0x63, 0x74, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2f, 0x7b, 0x6e, 0x61, 0x6d, 0x65, 0x7d, 0x42,
+	0x63, 0x74, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2f, 0x7b, 0x6e, 0x61, 0x6d, 0x65, 0x7d, 0x32,
+	0x7e, 0x0a, 0x0d, 0x52, 0x65, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x73,
+	0x12, 0x6d, 0x0a, 0x06, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x12, 0x1f, 0x2e, 0x7a, 0x68, 0x69,
+	0x68, 0x75, 0x2e, 0x63, 0x6d, 0x64, 0x62, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e, 0x52,
+	0x65, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x1a, 0x1f, 0x2e, 0x7a, 0x68,
+	0x69, 0x68, 0x75, 0x2e, 0x63, 0x6d, 0x64, 0x62, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x2e,
+	0x52, 0x65, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x22, 0x21, 0x82, 0xd3,
+	0xe4, 0x93, 0x02, 0x1b, 0x22, 0x16, 0x2f, 0x76, 0x31, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x72, 0x65,
+	0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x73, 0x3a, 0x01, 0x2a, 0x42,
 	0x26, 0x0a, 0x15, 0x63, 0x6f, 0x6d, 0x2e, 0x7a, 0x68, 0x69, 0x68, 0x75, 0x2e, 0x63, 0x6d, 0x64,
 	0x62, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x5a, 0x0d, 0x70, 0x6b, 0x67, 0x2f, 0x61, 0x70,
 	0x69, 0x2f, 0x76, 0x31, 0x3b, 0x76, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
@@ -1488,7 +1811,7 @@ func file_pkg_api_v1_service_proto_rawDescGZIP() []byte {
 }
 
 var file_pkg_api_v1_service_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_pkg_api_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_pkg_api_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_pkg_api_v1_service_proto_goTypes = []interface{}{
 	(ValueType)(0),                  // 0: zhihu.cmdb.api.v1.ValueType
 	(ObjectView)(0),                 // 1: zhihu.cmdb.api.v1.ObjectView
@@ -1509,23 +1832,28 @@ var file_pkg_api_v1_service_proto_goTypes = []interface{}{
 	(*ListObjectTypesRequest)(nil),  // 16: zhihu.cmdb.api.v1.ListObjectTypesRequest
 	(*ListObjectTypesResponse)(nil), // 17: zhihu.cmdb.api.v1.ListObjectTypesResponse
 	(*ObjectTypeUpdateRequest)(nil), // 18: zhihu.cmdb.api.v1.ObjectTypeUpdateRequest
-	nil,                             // 19: zhihu.cmdb.api.v1.ObjectType.StatusesEntry
-	nil,                             // 20: zhihu.cmdb.api.v1.ObjectType.MetasEntry
-	nil,                             // 21: zhihu.cmdb.api.v1.ObjectStatus.StatesEntry
-	nil,                             // 22: zhihu.cmdb.api.v1.Object.MetasEntry
-	(*timestamp.Timestamp)(nil),     // 23: google.protobuf.Timestamp
-	(*field_mask.FieldMask)(nil),    // 24: google.protobuf.FieldMask
+	(*RelationType)(nil),            // 19: zhihu.cmdb.api.v1.RelationType
+	(*ObjectReference)(nil),         // 20: zhihu.cmdb.api.v1.ObjectReference
+	(*Relation)(nil),                // 21: zhihu.cmdb.api.v1.Relation
+	nil,                             // 22: zhihu.cmdb.api.v1.ObjectType.StatusesEntry
+	nil,                             // 23: zhihu.cmdb.api.v1.ObjectType.MetasEntry
+	nil,                             // 24: zhihu.cmdb.api.v1.ObjectStatus.StatesEntry
+	nil,                             // 25: zhihu.cmdb.api.v1.Object.MetasEntry
+	nil,                             // 26: zhihu.cmdb.api.v1.RelationType.MetasEntry
+	nil,                             // 27: zhihu.cmdb.api.v1.Relation.MetasEntry
+	(*timestamp.Timestamp)(nil),     // 28: google.protobuf.Timestamp
+	(*field_mask.FieldMask)(nil),    // 29: google.protobuf.FieldMask
 }
 var file_pkg_api_v1_service_proto_depIdxs = []int32{
-	19, // 0: zhihu.cmdb.api.v1.ObjectType.statuses:type_name -> zhihu.cmdb.api.v1.ObjectType.StatusesEntry
-	20, // 1: zhihu.cmdb.api.v1.ObjectType.metas:type_name -> zhihu.cmdb.api.v1.ObjectType.MetasEntry
-	23, // 2: zhihu.cmdb.api.v1.ObjectType.create_time:type_name -> google.protobuf.Timestamp
-	23, // 3: zhihu.cmdb.api.v1.ObjectType.delete_time:type_name -> google.protobuf.Timestamp
-	21, // 4: zhihu.cmdb.api.v1.ObjectStatus.states:type_name -> zhihu.cmdb.api.v1.ObjectStatus.StatesEntry
+	22, // 0: zhihu.cmdb.api.v1.ObjectType.statuses:type_name -> zhihu.cmdb.api.v1.ObjectType.StatusesEntry
+	23, // 1: zhihu.cmdb.api.v1.ObjectType.metas:type_name -> zhihu.cmdb.api.v1.ObjectType.MetasEntry
+	28, // 2: zhihu.cmdb.api.v1.ObjectType.create_time:type_name -> google.protobuf.Timestamp
+	28, // 3: zhihu.cmdb.api.v1.ObjectType.delete_time:type_name -> google.protobuf.Timestamp
+	24, // 4: zhihu.cmdb.api.v1.ObjectStatus.states:type_name -> zhihu.cmdb.api.v1.ObjectStatus.StatesEntry
 	0,  // 5: zhihu.cmdb.api.v1.ObjectMeta.value_type:type_name -> zhihu.cmdb.api.v1.ValueType
-	23, // 6: zhihu.cmdb.api.v1.Object.create_time:type_name -> google.protobuf.Timestamp
-	23, // 7: zhihu.cmdb.api.v1.Object.update_time:type_name -> google.protobuf.Timestamp
-	22, // 8: zhihu.cmdb.api.v1.Object.metas:type_name -> zhihu.cmdb.api.v1.Object.MetasEntry
+	28, // 6: zhihu.cmdb.api.v1.Object.create_time:type_name -> google.protobuf.Timestamp
+	28, // 7: zhihu.cmdb.api.v1.Object.update_time:type_name -> google.protobuf.Timestamp
+	25, // 8: zhihu.cmdb.api.v1.Object.metas:type_name -> zhihu.cmdb.api.v1.Object.MetasEntry
 	0,  // 9: zhihu.cmdb.api.v1.ObjectMetaValue.value_type:type_name -> zhihu.cmdb.api.v1.ValueType
 	1,  // 10: zhihu.cmdb.api.v1.ObjectListRequest.view:type_name -> zhihu.cmdb.api.v1.ObjectView
 	1,  // 11: zhihu.cmdb.api.v1.ObjectGetRequest.view:type_name -> zhihu.cmdb.api.v1.ObjectView
@@ -1533,39 +1861,53 @@ var file_pkg_api_v1_service_proto_depIdxs = []int32{
 	7,  // 13: zhihu.cmdb.api.v1.ObjectWatchEvent.objects:type_name -> zhihu.cmdb.api.v1.Object
 	2,  // 14: zhihu.cmdb.api.v1.ObjectWatchEvent.type:type_name -> zhihu.cmdb.api.v1.WatchEventType
 	7,  // 15: zhihu.cmdb.api.v1.ObjectUpdateRequest.object:type_name -> zhihu.cmdb.api.v1.Object
-	24, // 16: zhihu.cmdb.api.v1.ObjectUpdateRequest.update_mask:type_name -> google.protobuf.FieldMask
+	29, // 16: zhihu.cmdb.api.v1.ObjectUpdateRequest.update_mask:type_name -> google.protobuf.FieldMask
 	3,  // 17: zhihu.cmdb.api.v1.ListObjectTypesResponse.types:type_name -> zhihu.cmdb.api.v1.ObjectType
 	3,  // 18: zhihu.cmdb.api.v1.ObjectTypeUpdateRequest.type:type_name -> zhihu.cmdb.api.v1.ObjectType
-	24, // 19: zhihu.cmdb.api.v1.ObjectTypeUpdateRequest.update_mask:type_name -> google.protobuf.FieldMask
-	4,  // 20: zhihu.cmdb.api.v1.ObjectType.StatusesEntry.value:type_name -> zhihu.cmdb.api.v1.ObjectStatus
-	6,  // 21: zhihu.cmdb.api.v1.ObjectType.MetasEntry.value:type_name -> zhihu.cmdb.api.v1.ObjectMeta
-	5,  // 22: zhihu.cmdb.api.v1.ObjectStatus.StatesEntry.value:type_name -> zhihu.cmdb.api.v1.ObjectState
-	8,  // 23: zhihu.cmdb.api.v1.Object.MetasEntry.value:type_name -> zhihu.cmdb.api.v1.ObjectMetaValue
-	9,  // 24: zhihu.cmdb.api.v1.Objects.List:input_type -> zhihu.cmdb.api.v1.ObjectListRequest
-	10, // 25: zhihu.cmdb.api.v1.Objects.Get:input_type -> zhihu.cmdb.api.v1.ObjectGetRequest
-	11, // 26: zhihu.cmdb.api.v1.Objects.Delete:input_type -> zhihu.cmdb.api.v1.ObjectDeleteRequest
-	7,  // 27: zhihu.cmdb.api.v1.Objects.Create:input_type -> zhihu.cmdb.api.v1.Object
-	14, // 28: zhihu.cmdb.api.v1.Objects.Update:input_type -> zhihu.cmdb.api.v1.ObjectUpdateRequest
-	9,  // 29: zhihu.cmdb.api.v1.Objects.Watch:input_type -> zhihu.cmdb.api.v1.ObjectListRequest
-	3,  // 30: zhihu.cmdb.api.v1.ObjectTypes.Create:input_type -> zhihu.cmdb.api.v1.ObjectType
-	18, // 31: zhihu.cmdb.api.v1.ObjectTypes.Update:input_type -> zhihu.cmdb.api.v1.ObjectTypeUpdateRequest
-	16, // 32: zhihu.cmdb.api.v1.ObjectTypes.List:input_type -> zhihu.cmdb.api.v1.ListObjectTypesRequest
-	15, // 33: zhihu.cmdb.api.v1.ObjectTypes.Get:input_type -> zhihu.cmdb.api.v1.GetObjectTypeRequest
-	12, // 34: zhihu.cmdb.api.v1.Objects.List:output_type -> zhihu.cmdb.api.v1.ObjectListResponse
-	7,  // 35: zhihu.cmdb.api.v1.Objects.Get:output_type -> zhihu.cmdb.api.v1.Object
-	7,  // 36: zhihu.cmdb.api.v1.Objects.Delete:output_type -> zhihu.cmdb.api.v1.Object
-	7,  // 37: zhihu.cmdb.api.v1.Objects.Create:output_type -> zhihu.cmdb.api.v1.Object
-	7,  // 38: zhihu.cmdb.api.v1.Objects.Update:output_type -> zhihu.cmdb.api.v1.Object
-	13, // 39: zhihu.cmdb.api.v1.Objects.Watch:output_type -> zhihu.cmdb.api.v1.ObjectWatchEvent
-	3,  // 40: zhihu.cmdb.api.v1.ObjectTypes.Create:output_type -> zhihu.cmdb.api.v1.ObjectType
-	3,  // 41: zhihu.cmdb.api.v1.ObjectTypes.Update:output_type -> zhihu.cmdb.api.v1.ObjectType
-	17, // 42: zhihu.cmdb.api.v1.ObjectTypes.List:output_type -> zhihu.cmdb.api.v1.ListObjectTypesResponse
-	3,  // 43: zhihu.cmdb.api.v1.ObjectTypes.Get:output_type -> zhihu.cmdb.api.v1.ObjectType
-	34, // [34:44] is the sub-list for method output_type
-	24, // [24:34] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	29, // 19: zhihu.cmdb.api.v1.ObjectTypeUpdateRequest.update_mask:type_name -> google.protobuf.FieldMask
+	26, // 20: zhihu.cmdb.api.v1.RelationType.metas:type_name -> zhihu.cmdb.api.v1.RelationType.MetasEntry
+	28, // 21: zhihu.cmdb.api.v1.RelationType.create_time:type_name -> google.protobuf.Timestamp
+	28, // 22: zhihu.cmdb.api.v1.RelationType.update_time:type_name -> google.protobuf.Timestamp
+	28, // 23: zhihu.cmdb.api.v1.RelationType.delete_time:type_name -> google.protobuf.Timestamp
+	20, // 24: zhihu.cmdb.api.v1.Relation.from:type_name -> zhihu.cmdb.api.v1.ObjectReference
+	20, // 25: zhihu.cmdb.api.v1.Relation.to:type_name -> zhihu.cmdb.api.v1.ObjectReference
+	27, // 26: zhihu.cmdb.api.v1.Relation.metas:type_name -> zhihu.cmdb.api.v1.Relation.MetasEntry
+	28, // 27: zhihu.cmdb.api.v1.Relation.create_time:type_name -> google.protobuf.Timestamp
+	28, // 28: zhihu.cmdb.api.v1.Relation.update_time:type_name -> google.protobuf.Timestamp
+	28, // 29: zhihu.cmdb.api.v1.Relation.delete_time:type_name -> google.protobuf.Timestamp
+	4,  // 30: zhihu.cmdb.api.v1.ObjectType.StatusesEntry.value:type_name -> zhihu.cmdb.api.v1.ObjectStatus
+	6,  // 31: zhihu.cmdb.api.v1.ObjectType.MetasEntry.value:type_name -> zhihu.cmdb.api.v1.ObjectMeta
+	5,  // 32: zhihu.cmdb.api.v1.ObjectStatus.StatesEntry.value:type_name -> zhihu.cmdb.api.v1.ObjectState
+	8,  // 33: zhihu.cmdb.api.v1.Object.MetasEntry.value:type_name -> zhihu.cmdb.api.v1.ObjectMetaValue
+	6,  // 34: zhihu.cmdb.api.v1.RelationType.MetasEntry.value:type_name -> zhihu.cmdb.api.v1.ObjectMeta
+	8,  // 35: zhihu.cmdb.api.v1.Relation.MetasEntry.value:type_name -> zhihu.cmdb.api.v1.ObjectMetaValue
+	9,  // 36: zhihu.cmdb.api.v1.Objects.List:input_type -> zhihu.cmdb.api.v1.ObjectListRequest
+	10, // 37: zhihu.cmdb.api.v1.Objects.Get:input_type -> zhihu.cmdb.api.v1.ObjectGetRequest
+	11, // 38: zhihu.cmdb.api.v1.Objects.Delete:input_type -> zhihu.cmdb.api.v1.ObjectDeleteRequest
+	7,  // 39: zhihu.cmdb.api.v1.Objects.Create:input_type -> zhihu.cmdb.api.v1.Object
+	14, // 40: zhihu.cmdb.api.v1.Objects.Update:input_type -> zhihu.cmdb.api.v1.ObjectUpdateRequest
+	9,  // 41: zhihu.cmdb.api.v1.Objects.Watch:input_type -> zhihu.cmdb.api.v1.ObjectListRequest
+	3,  // 42: zhihu.cmdb.api.v1.ObjectTypes.Create:input_type -> zhihu.cmdb.api.v1.ObjectType
+	18, // 43: zhihu.cmdb.api.v1.ObjectTypes.Update:input_type -> zhihu.cmdb.api.v1.ObjectTypeUpdateRequest
+	16, // 44: zhihu.cmdb.api.v1.ObjectTypes.List:input_type -> zhihu.cmdb.api.v1.ListObjectTypesRequest
+	15, // 45: zhihu.cmdb.api.v1.ObjectTypes.Get:input_type -> zhihu.cmdb.api.v1.GetObjectTypeRequest
+	19, // 46: zhihu.cmdb.api.v1.RelationTypes.Create:input_type -> zhihu.cmdb.api.v1.RelationType
+	12, // 47: zhihu.cmdb.api.v1.Objects.List:output_type -> zhihu.cmdb.api.v1.ObjectListResponse
+	7,  // 48: zhihu.cmdb.api.v1.Objects.Get:output_type -> zhihu.cmdb.api.v1.Object
+	7,  // 49: zhihu.cmdb.api.v1.Objects.Delete:output_type -> zhihu.cmdb.api.v1.Object
+	7,  // 50: zhihu.cmdb.api.v1.Objects.Create:output_type -> zhihu.cmdb.api.v1.Object
+	7,  // 51: zhihu.cmdb.api.v1.Objects.Update:output_type -> zhihu.cmdb.api.v1.Object
+	13, // 52: zhihu.cmdb.api.v1.Objects.Watch:output_type -> zhihu.cmdb.api.v1.ObjectWatchEvent
+	3,  // 53: zhihu.cmdb.api.v1.ObjectTypes.Create:output_type -> zhihu.cmdb.api.v1.ObjectType
+	3,  // 54: zhihu.cmdb.api.v1.ObjectTypes.Update:output_type -> zhihu.cmdb.api.v1.ObjectType
+	17, // 55: zhihu.cmdb.api.v1.ObjectTypes.List:output_type -> zhihu.cmdb.api.v1.ListObjectTypesResponse
+	3,  // 56: zhihu.cmdb.api.v1.ObjectTypes.Get:output_type -> zhihu.cmdb.api.v1.ObjectType
+	19, // 57: zhihu.cmdb.api.v1.RelationTypes.Create:output_type -> zhihu.cmdb.api.v1.RelationType
+	47, // [47:58] is the sub-list for method output_type
+	36, // [36:47] is the sub-list for method input_type
+	36, // [36:36] is the sub-list for extension type_name
+	36, // [36:36] is the sub-list for extension extendee
+	0,  // [0:36] is the sub-list for field type_name
 }
 
 func init() { file_pkg_api_v1_service_proto_init() }
@@ -1766,6 +2108,42 @@ func file_pkg_api_v1_service_proto_init() {
 				return nil
 			}
 		}
+		file_pkg_api_v1_service_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RelationType); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_pkg_api_v1_service_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ObjectReference); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_pkg_api_v1_service_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Relation); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1773,9 +2151,9 @@ func file_pkg_api_v1_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_pkg_api_v1_service_proto_rawDesc,
 			NumEnums:      3,
-			NumMessages:   20,
+			NumMessages:   25,
 			NumExtensions: 0,
-			NumServices:   2,
+			NumServices:   3,
 		},
 		GoTypes:           file_pkg_api_v1_service_proto_goTypes,
 		DependencyIndexes: file_pkg_api_v1_service_proto_depIdxs,
@@ -2250,6 +2628,78 @@ var _ObjectTypes_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Get",
 			Handler:    _ObjectTypes_Get_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "pkg/api/v1/service.proto",
+}
+
+// RelationTypesClient is the client API for RelationTypes service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type RelationTypesClient interface {
+	Create(ctx context.Context, in *RelationType, opts ...grpc.CallOption) (*RelationType, error)
+}
+
+type relationTypesClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewRelationTypesClient(cc grpc.ClientConnInterface) RelationTypesClient {
+	return &relationTypesClient{cc}
+}
+
+func (c *relationTypesClient) Create(ctx context.Context, in *RelationType, opts ...grpc.CallOption) (*RelationType, error) {
+	out := new(RelationType)
+	err := c.cc.Invoke(ctx, "/zhihu.cmdb.api.v1.RelationTypes/Create", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// RelationTypesServer is the server API for RelationTypes service.
+type RelationTypesServer interface {
+	Create(context.Context, *RelationType) (*RelationType, error)
+}
+
+// UnimplementedRelationTypesServer can be embedded to have forward compatible implementations.
+type UnimplementedRelationTypesServer struct {
+}
+
+func (*UnimplementedRelationTypesServer) Create(context.Context, *RelationType) (*RelationType, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+
+func RegisterRelationTypesServer(s *grpc.Server, srv RelationTypesServer) {
+	s.RegisterService(&_RelationTypes_serviceDesc, srv)
+}
+
+func _RelationTypes_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RelationType)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RelationTypesServer).Create(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/zhihu.cmdb.api.v1.RelationTypes/Create",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RelationTypesServer).Create(ctx, req.(*RelationType))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _RelationTypes_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "zhihu.cmdb.api.v1.RelationTypes",
+	HandlerType: (*RelationTypesServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Create",
+			Handler:    _RelationTypes_Create_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

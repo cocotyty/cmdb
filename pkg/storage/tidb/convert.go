@@ -83,3 +83,20 @@ func convertMeta(meta *model.ObjectMeta) *v1.ObjectMeta {
 		ValueType:   v1.ValueType(meta.ValueType),
 	}
 }
+
+func convertRelationType(rt *model.ObjectRelationType, from, to string) *v1.RelationType {
+	typ := &v1.RelationType{
+		Name:        rt.Name,
+		From:        from,
+		To:          to,
+		Description: rt.Description,
+	}
+	typ.CreateTime, _ = ptypes.TimestampProto(rt.CreateTime)
+	if rt.UpdateTime != nil {
+		typ.UpdateTime, _ = ptypes.TimestampProto(*rt.UpdateTime)
+	}
+	if rt.DeleteTime != nil {
+		typ.DeleteTime, _ = ptypes.TimestampProto(*rt.DeleteTime)
+	}
+	return typ
+}

@@ -156,9 +156,9 @@ type DeletedObjectLog struct {
 
 type ObjectRelationType struct {
 	ID          int    `db:"id"`
-	FromTypeID  int    `db:"from_type_id"`
-	ToTypeID    int    `db:"to_type_id"`
-	Name        string `db:"name"`
+	FromTypeID  int    `db:"from_type_id" table:"index:FromTypeID;index:LogicalID,unique"`
+	ToTypeID    int    `db:"to_type_id" table:"index:ToTypeID;index:LogicalID,unique"`
+	Name        string `db:"name" table:"index:LogicalID,unique"`
 	Description string `db:"description"`
 	// Default: CURRENT_TIMESTAMP
 	CreateTime time.Time  `db:"create_time"`
@@ -202,7 +202,7 @@ type DeletedObjectRelation struct {
 
 type ObjectRelationMeta struct {
 	ID             int    `db:"id"`
-	RelationTypeID int    `db:"relation_type_id"`
+	RelationTypeID int    `db:"relation_type_id" table:"belongsTo:many,ObjectRelationType,ID;index:RelationTypeID"`
 	Name           string `db:"name"`
 	// Comment: 1: STRING 2: INTEGER, 3: DOUBLE, 4: BOOLEAN
 	// Default: 1

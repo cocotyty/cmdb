@@ -192,3 +192,38 @@ service ObjectTypes {
         };
     }
 }
+
+message RelationType {
+    string name = 1;
+    string from = 2;
+    string to = 3;
+    string description = 4;
+    map<string, ObjectMeta> metas = 5;
+    google.protobuf.Timestamp create_time = 6;
+    google.protobuf.Timestamp update_time = 7;
+    google.protobuf.Timestamp delete_time = 8;
+}
+
+service RelationTypes {
+    rpc Create (RelationType) returns (RelationType) {
+        option (google.api.http) = {
+            post: "/v1/api/relation_types"
+            body: "*"
+        };
+    };
+}
+
+message ObjectReference {
+    string type = 1;
+    string name = 2;
+}
+
+message Relation {
+    string relation = 1;
+    ObjectReference from = 2;
+    ObjectReference to = 3;
+    map<string, ObjectMetaValue> metas = 6;
+    google.protobuf.Timestamp create_time = 7;
+    google.protobuf.Timestamp update_time = 8;
+    google.protobuf.Timestamp delete_time = 9;
+}

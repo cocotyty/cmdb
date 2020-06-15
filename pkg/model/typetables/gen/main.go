@@ -56,9 +56,10 @@ func(d *Database) OnEvents(transaction []cdc.Event) {
 	}
 }
 `
+
 func main() {
 	var generatePath = "../tables.gen.go"
-	tablesInfo, err := mtables.GenerateTablesInfo("table", "DeleteTime", model.ObjectType{}, model.ObjectStatus{}, model.ObjectState{}, model.ObjectMeta{})
+	tablesInfo, err := mtables.GenerateTablesInfo("table", "DeleteTime", model.ObjectType{}, model.ObjectStatus{}, model.ObjectState{}, model.ObjectMeta{}, model.ObjectRelationType{}, model.ObjectRelationMeta{})
 	if err != nil {
 		panic(err)
 	}
