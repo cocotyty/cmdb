@@ -59,27 +59,32 @@ func GenerateTablesInfo(tagName string, softDeleteFieldName string, tables ...in
 				id = &f
 			}
 			tag := splitTag(f.Tag.Get(tagName))
-			var idx, ok = tag["index"]
-			if ok && idx == "" {
-				idx = s
-			}
-			if idx != "" {
-				parts := strings.Split(idx, ",")
-				var name = strings.TrimSpace(parts[0])
-				var ii = table.Indexes[name]
-				if len(parts) > 1 && strings.TrimSpace(parts[1]) == "unique" {
-					ii.Unique = true
+			var indexes, ok = tag["index"]
+			for _, idx := range indexes {
+				if ok && idx == "" {
+					idx = s
 				}
-				ii.Fields = append(ii.Fields, Field{
-					Name: f.Name,
-					Type: f.Type,
-				})
-				ii.Name = name
-				table.Indexes[name] = ii
+				if idx != "" {
+					parts := strings.Split(idx, ",")
+					var name = strings.TrimSpace(parts[0])
+					var ii = table.Indexes[name]
+					if len(parts) > 1 && strings.TrimSpace(parts[1]) == "unique" {
+						ii.Unique = true
+					}
+					ii.Fields = append(ii.Fields, Field{
+						Name: f.Name,
+						Type: f.Type,
+					})
+					ii.Name = name
+					table.Indexes[name] = ii
+				}
 			}
-			r := relationTag(tag["belongsTo"], f)
-			if r.tableName != "" {
-				relations[table.Name] = append(relations[table.Name], r)
+			belongsTos := tag["belongsTo"]
+			if len(belongsTos) != 0 {
+				r := relationTag(belongsTos[0], f)
+				if r.tableName != "" {
+					relations[table.Name] = append(relations[table.Name], r)
+				}
 			}
 			if softDeleteFieldName != "" && softDeleteFieldName == s {
 				table.SoftDelete = &Field{
@@ -179,8 +184,8 @@ func relationTag(value string, f reflect.StructField) (r relation) {
 }
 
 // index: indexName;belongsTo: one,tableName,fieldsName;
-func splitTag(tag string) map[string]string {
-	m := map[string]string{}
+func splitTag(tag string) map[string][]string {
+	m := map[string][]string{}
 	list := strings.Split(tag, ";")
 	for _, s := range list {
 		s = strings.TrimSpace(s)
@@ -189,9 +194,9 @@ func splitTag(tag string) map[string]string {
 		}
 		kv := strings.Split(s, ":")
 		if len(kv) == 2 {
-			m[kv[0]] = kv[1]
+			m[kv[0]] = append(m[kv[0]], kv[1])
 		} else {
-			m[kv[0]] = ""
+			m[kv[0]] = append(m[kv[0]], kv[1])
 		}
 	}
 	return m

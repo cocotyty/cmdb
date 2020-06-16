@@ -19,10 +19,19 @@ import (
 
 	v1 "github.com/zhihu/cmdb/pkg/api/v1"
 	"github.com/zhihu/cmdb/pkg/storage"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ObjectTypes struct {
 	Storage storage.Storage
+}
+
+func (o *ObjectTypes) Delete(ctx context.Context, request *v1.GetObjectTypeRequest) (*v1.ObjectType, error) {
+	if request.Name == "" {
+		return nil, status.New(codes.InvalidArgument, "name should not be empty").Err()
+	}
+	return o.Storage.DeleteObjectType(ctx, request.Name)
 }
 
 func (o *ObjectTypes) List(ctx context.Context, request *v1.ListObjectTypesRequest) (*v1.ListObjectTypesResponse, error) {

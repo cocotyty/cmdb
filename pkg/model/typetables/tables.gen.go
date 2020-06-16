@@ -108,14 +108,22 @@ type RichObjectRelationType struct {
 }
 
 type ObjectRelationTypeTable struct {
-	ID        map[IndexObjectRelationTypeID]*RichObjectRelationType
-	LogicalID map[IndexObjectRelationTypeLogicalID]*RichObjectRelationType
+	FromTypeID map[IndexObjectRelationTypeFromTypeID][]*RichObjectRelationType
+	ID         map[IndexObjectRelationTypeID]*RichObjectRelationType
+	LogicalID  map[IndexObjectRelationTypeLogicalID]*RichObjectRelationType
+	ToTypeID   map[IndexObjectRelationTypeToTypeID][]*RichObjectRelationType
 }
 
 func (t *ObjectRelationTypeTable) Init() {
+	t.FromTypeID = map[IndexObjectRelationTypeFromTypeID][]*RichObjectRelationType{}
 	t.ID = map[IndexObjectRelationTypeID]*RichObjectRelationType{}
 	t.LogicalID = map[IndexObjectRelationTypeLogicalID]*RichObjectRelationType{}
+	t.ToTypeID = map[IndexObjectRelationTypeToTypeID][]*RichObjectRelationType{}
 
+}
+
+type IndexObjectRelationTypeFromTypeID struct {
+	FromTypeID int
 }
 
 type IndexObjectRelationTypeID struct {
@@ -128,12 +136,25 @@ type IndexObjectRelationTypeLogicalID struct {
 	Name       string
 }
 
+type IndexObjectRelationTypeToTypeID struct {
+	ToTypeID int
+}
+
+func (t *ObjectRelationTypeTable) FilterByFromTypeID(FromTypeID int) (rows []*RichObjectRelationType) {
+	rows, _ = t.FromTypeID[IndexObjectRelationTypeFromTypeID{FromTypeID: FromTypeID}]
+	return
+}
+
 func (t *ObjectRelationTypeTable) GetByID(ID int) (row *RichObjectRelationType, ok bool) {
 	row, ok = t.ID[IndexObjectRelationTypeID{ID: ID}]
 	return
 }
 func (t *ObjectRelationTypeTable) GetByLogicalID(FromTypeID int, ToTypeID int, Name string) (row *RichObjectRelationType, ok bool) {
 	row, ok = t.LogicalID[IndexObjectRelationTypeLogicalID{FromTypeID: FromTypeID, ToTypeID: ToTypeID, Name: Name}]
+	return
+}
+func (t *ObjectRelationTypeTable) FilterByToTypeID(ToTypeID int) (rows []*RichObjectRelationType) {
+	rows, _ = t.ToTypeID[IndexObjectRelationTypeToTypeID{ToTypeID: ToTypeID}]
 	return
 }
 
@@ -482,6 +503,14 @@ func (d *Database) InsertObjectRelationType(row *model.ObjectRelationType) (ok b
 	}
 
 	{
+		var index = IndexObjectRelationTypeFromTypeID{row.FromTypeID}
+
+		list := d.ObjectRelationTypeTable.FromTypeID[index]
+		list = append(list, richRow)
+		d.ObjectRelationTypeTable.FromTypeID[index] = list
+	}
+
+	{
 		var index = IndexObjectRelationTypeID{row.ID}
 		_, ok := d.ObjectRelationTypeTable.ID[index]
 		if ok {
@@ -499,6 +528,14 @@ func (d *Database) InsertObjectRelationType(row *model.ObjectRelationType) (ok b
 		}
 		d.ObjectRelationTypeTable.LogicalID[index] = richRow
 
+	}
+
+	{
+		var index = IndexObjectRelationTypeToTypeID{row.ToTypeID}
+
+		list := d.ObjectRelationTypeTable.ToTypeID[index]
+		list = append(list, richRow)
+		d.ObjectRelationTypeTable.ToTypeID[index] = list
 	}
 
 	{ // has_many
@@ -535,6 +572,19 @@ func (d *Database) DeleteObjectRelationType(row *model.ObjectRelationType) (ok b
 	noop(richRow)
 
 	{
+		var index = IndexObjectRelationTypeFromTypeID{row.FromTypeID}
+
+		list := d.ObjectRelationTypeTable.FromTypeID[index]
+		var newList = make([]*RichObjectRelationType, 0, len(list)-1)
+		for _, item := range list {
+			if item.ObjectRelationType.ID != row.ID {
+				newList = append(newList, item)
+			}
+		}
+		d.ObjectRelationTypeTable.FromTypeID[index] = newList
+	}
+
+	{
 		var index = IndexObjectRelationTypeID{row.ID}
 		delete(d.ObjectRelationTypeTable.ID, index)
 
@@ -544,6 +594,19 @@ func (d *Database) DeleteObjectRelationType(row *model.ObjectRelationType) (ok b
 		var index = IndexObjectRelationTypeLogicalID{row.FromTypeID, row.ToTypeID, row.Name}
 		delete(d.ObjectRelationTypeTable.LogicalID, index)
 
+	}
+
+	{
+		var index = IndexObjectRelationTypeToTypeID{row.ToTypeID}
+
+		list := d.ObjectRelationTypeTable.ToTypeID[index]
+		var newList = make([]*RichObjectRelationType, 0, len(list)-1)
+		for _, item := range list {
+			if item.ObjectRelationType.ID != row.ID {
+				newList = append(newList, item)
+			}
+		}
+		d.ObjectRelationTypeTable.ToTypeID[index] = newList
 	}
 
 	{

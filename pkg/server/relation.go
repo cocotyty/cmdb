@@ -17,11 +17,29 @@ import (
 	"context"
 
 	v1 "github.com/zhihu/cmdb/pkg/api/v1"
+	"github.com/zhihu/cmdb/pkg/storage"
 )
 
-type RelationType struct {
+type RelationTypes struct {
+	Storage storage.Storage
 }
 
-func (r *RelationType) Create(ctx context.Context, relationType *v1.RelationType) (*v1.RelationType, error) {
+func (r *RelationTypes) Create(ctx context.Context, relationType *v1.RelationType) (*v1.RelationType, error) {
+	return r.Storage.CreateRelationType(ctx, relationType)
+}
 
+func (r *RelationTypes) Update(ctx context.Context, request *v1.RelationTypeUpdateRequest) (*v1.RelationType, error) {
+	return r.Storage.UpdateRelationType(ctx, request.Type, request.UpdateMask.Paths)
+}
+
+func (r *RelationTypes) List(ctx context.Context, request *v1.ListRelationTypesRequest) (*v1.ListRelationTypesResponse, error) {
+	types, err := r.Storage.ListRelationType(ctx, request.Consistent, request.ShowDeleted)
+	if err != nil {
+		return nil, err
+	}
+	return &v1.ListRelationTypesResponse{Types: types}, nil
+}
+
+func (r *RelationTypes) Delete(ctx context.Context, relationType *v1.RelationType) (*v1.RelationType, error) {
+	return r.Storage.DeleteRelationType(ctx, relationType.From, relationType.To, relationType.Name)
 }

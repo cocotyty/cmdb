@@ -16,6 +16,8 @@ package tidb
 import (
 	"context"
 	"database/sql"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -142,6 +144,7 @@ func (s *Storage) GetRelation(ctx context.Context, from *v1.ObjectReference, to 
 	if err != nil {
 		return nil, internalError(err)
 	}
+	defer tx.Rollback()
 
 	relation, err := s.getRelationByID(ctx, tx, relationTypeID, fromTypeID, toTypeID, showDeleted)
 	if err != nil {
@@ -206,4 +209,175 @@ func (s *Storage) getRelationMetasByID(ctx context.Context, tx *sqlx.Tx, relatio
 		return nil, internalError(err)
 	}
 	return values, nil
+}
+
+func (s *Storage) ListObjectRelations(ctx context.Context, from *v1.ObjectReference, showDeleted bool) (relations []*v1.Relation, err error) {
+	var metas map[int]*model.ObjectRelationMeta
+	var relationTypes map[int]*model.ObjectRelationType
+	var objectTypes map[int]string
+	var fromTypeID int
+	s.cache.TypeCache(func(d *typetables.Database) {
+		fromType, ok := d.ObjectTypeTable.GetByName(from.Type)
+		if !ok {
+			return
+		}
+		fromTypeID = fromType.ID
+		relations := d.ObjectRelationTypeTable.FilterByFromTypeID(fromType.ID)
+		for _, relation := range relations {
+			fromType, ok := d.ObjectTypeTable.GetByID(relation.FromTypeID)
+			if !ok {
+				continue
+			}
+			objectTypes[fromType.ID] = fromType.ObjectType.Name
+
+			toType, ok := d.ObjectTypeTable.GetByID(relation.ToTypeID)
+			if !ok {
+				continue
+			}
+			objectTypes[toType.ID] = toType.ObjectType.Name
+
+			var copied = relation.ObjectRelationType
+			relationTypes[relation.ID] = &copied
+			for _, meta := range relation.ObjectRelationMeta {
+				var copied = meta.ObjectRelationMeta
+				metas[meta.ID] = &copied
+			}
+
+		}
+	})
+	if fromTypeID == 0 {
+		return nil, notFound("no such object: %s/%s", from.Type, from.Name)
+	}
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return nil, internalError(err)
+	}
+	defer tx.Rollback()
+
+	object := &model.Object{}
+	err = tx.GetContext(ctx, object, "select * from object where type_id = ? and name = ? limit 1", fromTypeID, from.Name)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, notFound("no such object: %s/%s", from.Type, from.Name)
+		}
+		return nil, internalError(err)
+	}
+
+	for _, relationType := range relationTypes {
+		var objectRelations []model.ObjectRelation
+		var queryObjectRelations = "select * from object_relation where relation_type_id = ? and from_object_id = ?"
+		if !showDeleted {
+			queryObjectRelations += " and delete_time is null"
+		}
+		err = tx.SelectContext(ctx, &objectRelations, queryObjectRelations,
+			relationType.ID, object.ID,
+		)
+		if err != nil {
+			return nil, internalError(err)
+		}
+		var metaValues []*model.ObjectRelationMetaValue
+		err = tx.SelectContext(ctx, &metaValues, "select * from object_relation_meta_value where from_object_id = ? and delete_time is null", object.ID)
+		if err != nil {
+			return nil, internalError(err)
+		}
+		var relationMetaValues = map[int][]*model.ObjectRelationMetaValue{}
+		for _, value := range metaValues {
+			relationMetaValues[value.ToObjectID] = append(relationMetaValues[value.ToObjectID], value)
+		}
+		var ids []string
+		for _, relation := range objectRelations {
+			ids = append(ids, strconv.Itoa(relation.ToObjectID))
+		}
+		var objectsNames []IDName
+		err = tx.SelectContext(ctx, &objectsNames, "select id,name from object where id in ("+strings.Join(ids, ",")+")")
+		var objects = map[int]string{}
+		for _, idName := range objectsNames {
+			objects[idName.ID] = idName.Name
+		}
+		for _, relation := range objectRelations {
+			var rel = &v1.Relation{
+				Relation: relationType.Name,
+				From:     from,
+				To:       &v1.ObjectReference{Type: objectTypes[relationType.ToTypeID], Name: objects[relation.ToObjectID]},
+				Metas:    map[string]*v1.ObjectMetaValue{},
+			}
+			rel.CreateTime, _ = ptypes.TimestampProto(relation.CreateTime)
+			if relation.UpdateTime != nil {
+				rel.UpdateTime, _ = ptypes.TimestampProto(*relation.UpdateTime)
+			}
+			if relation.DeleteTime != nil {
+				rel.DeleteTime, _ = ptypes.TimestampProto(*relation.DeleteTime)
+			}
+			values := relationMetaValues[relation.ToObjectID]
+			for _, value := range values {
+				rel.Metas[metas[value.MetaID].Name] = &v1.ObjectMetaValue{Value: value.Value, ValueType: v1.ValueType(metas[value.MetaID].ValueType)}
+			}
+			relations = append(relations, rel)
+		}
+	}
+	return relations, nil
+}
+
+func (s *Storage) ListRelations(ctx context.Context, from string, to string, relation string, showDeleted bool) (rels []*v1.Relation, err error) {
+	var metas map[int]*model.ObjectRelationMeta
+	var fromTypeID, toTypeID int
+	var relationTypeID int
+	s.cache.TypeCache(func(d *typetables.Database) {
+		fromType, ok := d.ObjectTypeTable.GetByName(from)
+		if !ok {
+			return
+		}
+		toType, ok := d.ObjectTypeTable.GetByName(to)
+		if !ok {
+			return
+		}
+		fromTypeID = fromType.ID
+		toTypeID = toType.ID
+		relation, ok := d.ObjectRelationTypeTable.GetByLogicalID(fromTypeID, toTypeID, relation)
+		if !ok {
+			return
+		}
+		relationTypeID = relation.ID
+		for _, meta := range relation.ObjectRelationMeta {
+			var copied = meta.ObjectRelationMeta
+			metas[meta.ID] = &copied
+		}
+	})
+	if relationTypeID == 0 {
+		return nil, notFound("no such object type: %s", from)
+	}
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return nil, internalError(err)
+	}
+	defer tx.Rollback()
+	var relations []*model.ObjectRelation
+	err = tx.SelectContext(ctx, &relations, "select * from object_relation where relation_type_id = ?", relationTypeID)
+	if err != nil {
+		return nil, internalError(err)
+	}
+	if len(relations) == 0 {
+		return []*v1.Relation{}, nil
+	}
+
+	var objectIDs = make([]string, 0, len(relations)*2)
+	for _, objectRelation := range relations {
+		objectIDs = append(objectIDs, strconv.Itoa(objectRelation.FromObjectID), strconv.Itoa(objectRelation.ToObjectID))
+	}
+	var objects []IDName
+	queryObjectsNames := "select id,name from object where id "
+	queryObjectsNames += " in (" + strings.Join(objectIDs, ",") + ")"
+	err = tx.SelectContext(ctx, &objects, queryObjectsNames)
+	if err != nil {
+		return nil, internalError(err)
+	}
+	var metaValues []*model.ObjectRelationMetaValue
+	err = tx.SelectContext(ctx, &metaValues, "select * from object_relation_meta_value where relation_type_id = ? and delete_time is null ", relationTypeID)
+	if err != nil {
+		return nil, internalError(err)
+	}
+
+	for _, value := range metaValues {
+		value
+	}
 }

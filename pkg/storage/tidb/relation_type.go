@@ -304,8 +304,8 @@ func (s *Storage) listRelationTypeFromCache() (list []*v1.RelationType) {
 	return
 }
 
-func (s *Storage) ListRelationType(ctx context.Context, consistent bool) (list []*v1.RelationType, err error) {
-	if !consistent {
+func (s *Storage) ListRelationType(ctx context.Context, consistent bool, showDeleted bool) (list []*v1.RelationType, err error) {
+	if !consistent && !showDeleted {
 		return s.listRelationTypeFromCache(), nil
 	}
 	tx, err := s.db.Beginx()
@@ -313,7 +313,11 @@ func (s *Storage) ListRelationType(ctx context.Context, consistent bool) (list [
 		return nil, internalError(err)
 	}
 	var relationTypes []*model.ObjectRelationType
-	err = tx.SelectContext(ctx, &relationTypes, "select * from object_relation_type where delete_time is null")
+	if !showDeleted {
+		err = tx.SelectContext(ctx, &relationTypes, "select * from object_relation_type where delete_time is null")
+	} else {
+		err = tx.SelectContext(ctx, &relationTypes, "select * from object_relation_type")
+	}
 	if err != nil {
 		return nil, internalError(err)
 	}
