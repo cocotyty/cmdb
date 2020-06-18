@@ -38,11 +38,15 @@ type Storage interface {
 
 	CreateRelationType(ctx context.Context, typ *v1.RelationType) (*v1.RelationType, error)
 	UpdateRelationType(ctx context.Context, typ *v1.RelationType, paths []string) (*v1.RelationType, error)
-	ListRelationType(ctx context.Context, consistent bool,showDeleted bool) (list []*v1.RelationType, err error)
+	ListRelationType(ctx context.Context, consistent bool, showDeleted bool) (list []*v1.RelationType, err error)
 	DeleteRelationType(ctx context.Context, from string, to string, name string) (*v1.RelationType, error)
 
 	CreateRelation(ctx context.Context, relation *v1.Relation) (created *v1.Relation, err error)
-	GetRelation(ctx context.Context, from *v1.ObjectReference, to *v1.ObjectReference, relationType string, showDeleted bool) (rel *v1.Relation, err error)
+	GetRelation(ctx context.Context, from *v1.ObjectReference, to *v1.ObjectReference, relationType string) (rel *v1.Relation, err error)
+	DeleteRelation(ctx context.Context, relation *v1.Relation) (updated *v1.Relation, err error)
+	UpdateRelation(ctx context.Context, relation *v1.Relation, paths []string) (updated *v1.Relation, err error)
+	ListRelations(ctx context.Context, from string, to string, relation string) (rels []*v1.Relation, err error)
+	ListObjectRelations(ctx context.Context, from *v1.ObjectReference) (relations []*v1.Relation, err error)
 }
 
 type ObjectUpdateOption struct {

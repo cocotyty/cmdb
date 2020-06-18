@@ -434,7 +434,7 @@ func (s *Storage) ListObjects(ctx context.Context, request *v1.ObjectListRequest
 }
 
 func (s *Storage) StopWatchObjects(ctx context.Context, typ string, f storage.FilterWatcher) error {
-	objects, err := s.cache.GetObjectsCache(ctx, typ)
+	objects, err := s.cache.GetObjects(ctx, typ)
 	if err != nil {
 		return err
 	}
@@ -443,11 +443,14 @@ func (s *Storage) StopWatchObjects(ctx context.Context, typ string, f storage.Fi
 }
 
 func (s *Storage) WatchObjects(ctx context.Context, typ string, f storage.FilterWatcher) error {
-	objects, err := s.cache.GetObjectsCache(ctx, typ)
+	objects, err := s.cache.GetObjects(ctx, typ)
 	if err != nil {
 		return err
 	}
-	objects.AddFilterWatcher(f)
+	err = objects.AddFilterWatcher(f)
+	if err != nil {
+		return unavailable("cache miss")
+	}
 	<-ctx.Done()
 	objects.RemoveFilterWatcher(f)
 	return nil

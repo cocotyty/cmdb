@@ -6,7 +6,7 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
+// Unless required by applicable law or agreed to in writing,
 // distributed under the License is distributed on an "AS IS" BASIS,
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -62,7 +62,7 @@ func (c *Cache) ReloadTypeCache(ctx context.Context, db *sqlx.DB) error {
 	return c.typeCache.InitData(ctx, db)
 }
 
-func (c *Cache) GetObjectsCache(ctx context.Context, name string) (*Objects, error) {
+func (c *Cache) GetObjects(ctx context.Context, name string) (*Objects, error) {
 	if loaded, ok := c.m.Load(name); ok {
 		return loaded.(*TypeObjectsIniter).Init(ctx)
 	}

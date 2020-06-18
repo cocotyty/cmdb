@@ -2,7 +2,9 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"sync"
+	"time"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/jmoiron/sqlx"
@@ -18,25 +20,32 @@ import (
 var log = loggo.GetLogger("cache")
 
 type Objects struct {
-	name           string
-	id             int
-	loaded         bool
-	memory         objects.Database
-	handlers       []storage.FilterWatcher
-	typ            *Types
-	objects        map[int]*v1.Object
-	mutex          sync.RWMutex
-	bufferedEvents [][]cdc.Event
+	name               string
+	id                 int
+	loaded             bool
+	memory             objects.Database
+	handlers           []storage.FilterWatcher
+	typ                *Types
+	objects            map[int]*v1.Object
+	mutex              sync.RWMutex
+	bufferedEvents     [][]cdc.Event
+	released           bool
+	releaseLaterCancel chan struct{}
+	releaseCallback    func()
+	stopCheckSignal    chan struct{}
 }
 
 func NewObjects(typ *Types, id int, name string) *Objects {
-	return &Objects{
-		name:    name,
-		id:      id,
-		typ:     typ,
-		objects: map[int]*v1.Object{},
-		mutex:   sync.RWMutex{},
+	o := &Objects{
+		name:            name,
+		id:              id,
+		typ:             typ,
+		objects:         map[int]*v1.Object{},
+		mutex:           sync.RWMutex{},
+		stopCheckSignal: make(chan struct{}, 1),
 	}
+	go o.selfCheck()
+	return o
 }
 
 func (t *Objects) ResetBuffer() {
@@ -87,14 +96,89 @@ func (t *Objects) RemoveFilterWatcher(f storage.FilterWatcher) {
 		}
 	}
 	t.handlers = nHandlers
+	if len(t.handlers) == 0 {
+		t.releaseLater()
+	}
 	t.mutex.Unlock()
 }
 
-func (t *Objects) AddFilterWatcher(f storage.FilterWatcher) {
+const releaseDelay = time.Second * 5
+
+func (t *Objects) release() {
+	t.stopCheckSignal <- struct{}{}
+	t.releaseCallback()
+
+}
+
+func (t *Objects) selfCheck() {
+	ticker := time.NewTicker(time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			time.Sleep(time.Second)
+			t.mutex.Lock()
+			if len(t.handlers) == 0 {
+				t.releaseLater()
+			}
+			t.mutex.Unlock()
+		case <-t.stopCheckSignal:
+			ticker.Stop()
+			return
+		}
+	}
+}
+
+func (t *Objects) releaseLater() {
+	if t.releaseLaterCancel != nil {
+		return
+	}
+	cancel := make(chan struct{}, 1)
+	t.releaseLaterCancel = cancel
+	timer := time.NewTimer(releaseDelay)
+	go func() {
+		select {
+		case <-timer.C:
+			t.mutex.Lock()
+			defer t.mutex.Unlock()
+			if t.releaseLaterCancel == nil {
+				return
+			}
+			t.releaseLaterCancel = nil
+			t.released = true
+			t.release()
+		case <-cancel:
+			if !timer.Stop() {
+				<-timer.C
+			}
+			return
+		}
+	}()
+}
+
+func (t *Objects) cancelRelease() {
+	if t.releaseLaterCancel != nil {
+		cancel := t.releaseLaterCancel
+		t.releaseLaterCancel = nil
+		select {
+		case cancel <- struct{}{}:
+		default:
+		}
+	}
+}
+
+var ErrReleased = errors.New("cache released")
+
+func (t *Objects) AddFilterWatcher(f storage.FilterWatcher) error {
 	t.mutex.Lock()
+	if t.released {
+		t.mutex.Unlock()
+		return ErrReleased
+	}
+	t.cancelRelease()
 	t.handlers = append(t.handlers, f)
 	t.mutex.Unlock()
 	f.OnInit(t.Filter(f))
+	return nil
 }
 
 func (t *Objects) Filter(f storage.FilterWatcher) (list []*v1.Object) {

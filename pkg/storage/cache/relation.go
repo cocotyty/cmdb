@@ -12,3 +12,7 @@
 // limitations under the License.
 
 package cache
+
+type Relation struct {
+
+}

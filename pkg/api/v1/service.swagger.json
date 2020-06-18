@@ -230,6 +230,152 @@
       }
     },
     "/v1/api/objects/{from.type}/{from.name}/relations/{relation}/{to.type}/{to.name}": {
+      "get": {
+        "operationId": "Relations_Get",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Relation"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from.type",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "from.name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "relation",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "to.type",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "to.name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "create_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "update_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "delete_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "Relations"
+        ]
+      },
+      "delete": {
+        "operationId": "Relations_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Relation"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from.type",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "from.name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "relation",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "to.type",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "to.name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "create_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "update_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "delete_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "Relations"
+        ]
+      },
       "post": {
         "operationId": "Relations_Create",
         "responses": {
@@ -283,6 +429,68 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/v1Relation"
+            }
+          }
+        ],
+        "tags": [
+          "Relations"
+        ]
+      }
+    },
+    "/v1/api/objects/{relation.from.type}/{relation.from.name}/relations/{relation.relation}/{relation.to.type}/{relation.to.name}": {
+      "put": {
+        "operationId": "Relations_Update",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Relation"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "relation.from.type",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "relation.from.name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "relation.relation",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "relation.to.type",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "relation.to.name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpdateRelationRequest"
             }
           }
         ],
@@ -518,6 +726,54 @@
         ]
       }
     },
+    "/v1/api/objects/{type}/{name}/relations": {
+      "get": {
+        "operationId": "Objects_Relations",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRelationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "BASIC",
+              "NORMAL",
+              "RICH"
+            ],
+            "default": "BASIC"
+          }
+        ],
+        "tags": [
+          "Objects"
+        ]
+      }
+    },
     "/v1/api/relation_types": {
       "get": {
         "operationId": "RelationTypes_List",
@@ -684,6 +940,48 @@
           "RelationTypes"
         ]
       }
+    },
+    "/v1/api/relations/{from}/{to}/{relation}": {
+      "get": {
+        "operationId": "Relations_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRelationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "to",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "relation",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Relations"
+        ]
+      }
     }
   },
   "definitions": {
@@ -766,6 +1064,17 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1ObjectType"
+          }
+        }
+      }
+    },
+    "v1ListRelationResponse": {
+      "type": "object",
+      "properties": {
+        "relations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1Relation"
           }
         }
       }
@@ -1052,6 +1361,17 @@
       "properties": {
         "type": {
           "$ref": "#/definitions/v1RelationType"
+        },
+        "update_mask": {
+          "$ref": "#/definitions/protobufFieldMask"
+        }
+      }
+    },
+    "v1UpdateRelationRequest": {
+      "type": "object",
+      "properties": {
+        "relation": {
+          "$ref": "#/definitions/v1Relation"
         },
         "update_mask": {
           "$ref": "#/definitions/protobufFieldMask"

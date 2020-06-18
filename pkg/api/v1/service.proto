@@ -146,6 +146,11 @@ service Objects {
             get: "/v1/api/objects/{type}/*/watch"
         };
     }
+    rpc Relations (ObjectGetRequest) returns (ListRelationResponse) {
+        option (google.api.http) = {
+            get: "/v1/api/objects/{type}/{name}/relations"
+        };
+    }
 }
 
 // ObjectTypes service define:
@@ -264,6 +269,21 @@ message Relation {
     google.protobuf.Timestamp delete_time = 9;
 }
 
+message UpdateRelationRequest {
+    Relation relation = 1;
+    google.protobuf.FieldMask update_mask = 2;
+}
+
+message ListRelationRequest {
+    string from = 1;
+    string to = 2;
+    string relation = 3;
+}
+
+message ListRelationResponse {
+    repeated Relation relations = 1;
+}
+
 service Relations {
     rpc Create (Relation) returns (Relation) {
         option (google.api.http) = {
@@ -274,8 +294,22 @@ service Relations {
     rpc Get (Relation) returns (Relation) {
         option (google.api.http) = {
             get: "/v1/api/objects/{from.type}/{from.name}/relations/{relation}/{to.type}/{to.name}"
+        };
+    };
+    rpc Update (UpdateRelationRequest) returns (Relation) {
+        option (google.api.http) = {
+            put: "/v1/api/objects/{relation.from.type}/{relation.from.name}/relations/{relation.relation}/{relation.to.type}/{relation.to.name}"
             body: "*"
         };
     };
-
+    rpc Delete (Relation) returns (Relation) {
+        option (google.api.http) = {
+            delete: "/v1/api/objects/{from.type}/{from.name}/relations/{relation}/{to.type}/{to.name}"
+        };
+    };
+    rpc List (ListRelationRequest) returns (ListRelationResponse) {
+        option (google.api.http) = {
+            get: "/v1/api/relations/{from}/{to}/{relation}"
+        };
+    };
 }

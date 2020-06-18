@@ -38,3 +38,6 @@ func unavailable(fmt string, args ...interface{}) error {
 func aborted(fmt string, args ...interface{}) error {
 	return status.Newf(codes.Aborted, fmt, args...).Err()
 }
+func invalidArguments(fmt string, args ...interface{}) error {
+	return status.Newf(codes.InvalidArgument, fmt, args...).Err()
+}
