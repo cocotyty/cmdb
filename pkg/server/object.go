@@ -30,8 +30,20 @@ type Objects struct {
 	Storage storage.Storage
 }
 
+func (o *Objects) Relations(ctx context.Context, request *v1.ObjectGetRequest) (*v1.ListRelationResponse, error) {
+	relations, err := o.Storage.ListObjectRelations(ctx, &v1.ObjectReference{
+		Type: request.Type,
+		Name: request.Name,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &v1.ListRelationResponse{Relations: relations}, nil
+}
+
 func (o *Objects) Delete(ctx context.Context, request *v1.ObjectDeleteRequest) (*v1.Object, error) {
-	panic("implement me")
+	object, err := o.Storage.DeleteObject(ctx, request.Type, request.Name)
+	return object, err
 }
 
 func (o *Objects) Update(ctx context.Context, request *v1.ObjectUpdateRequest) (*v1.Object, error) {
