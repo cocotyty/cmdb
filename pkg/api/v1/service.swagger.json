@@ -100,7 +100,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1ObjectTypeUpdateRequest"
+              "$ref": "#/definitions/v1UpdateObjectTypeRequest"
             }
           }
         ],
@@ -506,7 +506,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v1ObjectListResponse"
+              "$ref": "#/definitions/v1ListObjectResponse"
             }
           },
           "default": {
@@ -577,13 +577,13 @@
               "type": "object",
               "properties": {
                 "result": {
-                  "$ref": "#/definitions/v1ObjectWatchEvent"
+                  "$ref": "#/definitions/v1ObjectEvent"
                 },
                 "error": {
                   "$ref": "#/definitions/runtimeStreamError"
                 }
               },
-              "title": "Stream result of v1ObjectWatchEvent"
+              "title": "Stream result of v1ObjectEvent"
             }
           },
           "default": {
@@ -863,7 +863,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/v1RelationTypeUpdateRequest"
+              "$ref": "#/definitions/v1UpdateRelationTypeRequest"
             }
           }
         ],
@@ -873,6 +873,73 @@
       }
     },
     "/v1/api/relation_types/{name}": {
+      "get": {
+        "operationId": "RelationTypes_Get",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RelationType"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "create_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "update_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "delete_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "RelationTypes"
+        ]
+      },
       "delete": {
         "operationId": "RelationTypes_Delete",
         "responses": {
@@ -982,6 +1049,63 @@
           "Relations"
         ]
       }
+    },
+    "/v1/api/relations/{from}/{to}/{relation}/watch": {
+      "get": {
+        "operationId": "Relations_Watch",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1RelationEvent"
+                },
+                "error": {
+                  "$ref": "#/definitions/runtimeStreamError"
+                }
+              },
+              "title": "Stream result of v1RelationEvent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "to",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "relation",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Relations"
+        ]
+      }
     }
   },
   "definitions": {
@@ -1057,6 +1181,23 @@
         }
       }
     },
+    "v1ListObjectResponse": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "objects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1Object"
+          }
+        },
+        "next_page_token": {
+          "type": "string"
+        }
+      }
+    },
     "v1ListObjectTypesResponse": {
       "type": "object",
       "properties": {
@@ -1128,20 +1269,17 @@
         }
       }
     },
-    "v1ObjectListResponse": {
+    "v1ObjectEvent": {
       "type": "object",
       "properties": {
-        "kind": {
-          "type": "string"
-        },
         "objects": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/v1Object"
           }
         },
-        "next_page_token": {
-          "type": "string"
+        "type": {
+          "$ref": "#/definitions/v1WatchEventType"
         }
       }
     },
@@ -1240,17 +1378,6 @@
         }
       }
     },
-    "v1ObjectTypeUpdateRequest": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "$ref": "#/definitions/v1ObjectType"
-        },
-        "update_mask": {
-          "$ref": "#/definitions/protobufFieldMask"
-        }
-      }
-    },
     "v1ObjectUpdateRequest": {
       "type": "object",
       "properties": {
@@ -1274,20 +1401,6 @@
         "RICH"
       ],
       "default": "BASIC"
-    },
-    "v1ObjectWatchEvent": {
-      "type": "object",
-      "properties": {
-        "objects": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/v1Object"
-          }
-        },
-        "type": {
-          "$ref": "#/definitions/v1WatchEventType"
-        }
-      }
     },
     "v1Relation": {
       "type": "object",
@@ -1318,6 +1431,20 @@
         "delete_time": {
           "type": "string",
           "format": "date-time"
+        }
+      }
+    },
+    "v1RelationEvent": {
+      "type": "object",
+      "properties": {
+        "relations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1RichRelation"
+          }
+        },
+        "type": {
+          "$ref": "#/definitions/v1WatchEventType"
         }
       }
     },
@@ -1356,11 +1483,43 @@
         }
       }
     },
-    "v1RelationTypeUpdateRequest": {
+    "v1RichRelation": {
+      "type": "object",
+      "properties": {
+        "relation": {
+          "type": "string"
+        },
+        "from": {
+          "$ref": "#/definitions/v1Object"
+        },
+        "to": {
+          "$ref": "#/definitions/v1Object"
+        },
+        "metas": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/v1ObjectMetaValue"
+          }
+        },
+        "create_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "update_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "delete_time": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1UpdateObjectTypeRequest": {
       "type": "object",
       "properties": {
         "type": {
-          "$ref": "#/definitions/v1RelationType"
+          "$ref": "#/definitions/v1ObjectType"
         },
         "update_mask": {
           "$ref": "#/definitions/protobufFieldMask"
@@ -1372,6 +1531,17 @@
       "properties": {
         "relation": {
           "$ref": "#/definitions/v1Relation"
+        },
+        "update_mask": {
+          "$ref": "#/definitions/protobufFieldMask"
+        }
+      }
+    },
+    "v1UpdateRelationTypeRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1RelationType"
         },
         "update_mask": {
           "$ref": "#/definitions/protobufFieldMask"

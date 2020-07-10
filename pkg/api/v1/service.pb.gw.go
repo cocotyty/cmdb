@@ -36,7 +36,7 @@ var (
 )
 
 func request_Objects_List_0(ctx context.Context, marshaler runtime.Marshaler, client ObjectsClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ObjectListRequest
+	var protoReq ListObjectRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -70,7 +70,7 @@ func request_Objects_List_0(ctx context.Context, marshaler runtime.Marshaler, cl
 }
 
 func local_request_Objects_List_0(ctx context.Context, marshaler runtime.Marshaler, server ObjectsServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ObjectListRequest
+	var protoReq ListObjectRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -108,7 +108,7 @@ var (
 )
 
 func request_Objects_Get_0(ctx context.Context, marshaler runtime.Marshaler, client ObjectsClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ObjectGetRequest
+	var protoReq GetObjectRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -153,7 +153,7 @@ func request_Objects_Get_0(ctx context.Context, marshaler runtime.Marshaler, cli
 }
 
 func local_request_Objects_Get_0(ctx context.Context, marshaler runtime.Marshaler, server ObjectsServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ObjectGetRequest
+	var protoReq GetObjectRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -198,7 +198,7 @@ func local_request_Objects_Get_0(ctx context.Context, marshaler runtime.Marshale
 }
 
 func request_Objects_Delete_0(ctx context.Context, marshaler runtime.Marshaler, client ObjectsClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ObjectDeleteRequest
+	var protoReq DeleteObjectRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -236,7 +236,7 @@ func request_Objects_Delete_0(ctx context.Context, marshaler runtime.Marshaler, 
 }
 
 func local_request_Objects_Delete_0(ctx context.Context, marshaler runtime.Marshaler, server ObjectsServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ObjectDeleteRequest
+	var protoReq DeleteObjectRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -346,7 +346,7 @@ var (
 )
 
 func request_Objects_Watch_0(ctx context.Context, marshaler runtime.Marshaler, client ObjectsClient, req *http.Request, pathParams map[string]string) (Objects_WatchClient, runtime.ServerMetadata, error) {
-	var protoReq ObjectListRequest
+	var protoReq ListObjectRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -392,7 +392,7 @@ var (
 )
 
 func request_Objects_Relations_0(ctx context.Context, marshaler runtime.Marshaler, client ObjectsClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ObjectGetRequest
+	var protoReq GetObjectRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -437,7 +437,7 @@ func request_Objects_Relations_0(ctx context.Context, marshaler runtime.Marshale
 }
 
 func local_request_Objects_Relations_0(ctx context.Context, marshaler runtime.Marshaler, server ObjectsServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ObjectGetRequest
+	var protoReq GetObjectRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -516,7 +516,7 @@ func local_request_ObjectTypes_Create_0(ctx context.Context, marshaler runtime.M
 }
 
 func request_ObjectTypes_Update_0(ctx context.Context, marshaler runtime.Marshaler, client ObjectTypesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ObjectTypeUpdateRequest
+	var protoReq UpdateObjectTypeRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -533,7 +533,7 @@ func request_ObjectTypes_Update_0(ctx context.Context, marshaler runtime.Marshal
 }
 
 func local_request_ObjectTypes_Update_0(ctx context.Context, marshaler runtime.Marshaler, server ObjectTypesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ObjectTypeUpdateRequest
+	var protoReq UpdateObjectTypeRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -728,7 +728,7 @@ func local_request_RelationTypes_Create_0(ctx context.Context, marshaler runtime
 }
 
 func request_RelationTypes_Update_0(ctx context.Context, marshaler runtime.Marshaler, client RelationTypesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq RelationTypeUpdateRequest
+	var protoReq UpdateRelationTypeRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -745,7 +745,7 @@ func request_RelationTypes_Update_0(ctx context.Context, marshaler runtime.Marsh
 }
 
 func local_request_RelationTypes_Update_0(ctx context.Context, marshaler runtime.Marshaler, server RelationTypesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq RelationTypeUpdateRequest
+	var protoReq UpdateRelationTypeRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -793,6 +793,78 @@ func local_request_RelationTypes_List_0(ctx context.Context, marshaler runtime.M
 	}
 
 	msg, err := server.List(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+var (
+	filter_RelationTypes_Get_0 = &utilities.DoubleArray{Encoding: map[string]int{"name": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
+)
+
+func request_RelationTypes_Get_0(ctx context.Context, marshaler runtime.Marshaler, client RelationTypesClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq RelationType
+	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["name"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "name")
+	}
+
+	protoReq.Name, err = runtime.String(val)
+
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "name", err)
+	}
+
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_RelationTypes_Get_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := client.Get(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_RelationTypes_Get_0(ctx context.Context, marshaler runtime.Marshaler, server RelationTypesServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq RelationType
+	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["name"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "name")
+	}
+
+	protoReq.Name, err = runtime.String(val)
+
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "name", err)
+	}
+
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_RelationTypes_Get_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	msg, err := server.Get(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -1603,6 +1675,74 @@ func local_request_Relations_List_0(ctx context.Context, marshaler runtime.Marsh
 
 }
 
+var (
+	filter_Relations_Watch_0 = &utilities.DoubleArray{Encoding: map[string]int{"from": 0, "to": 1, "relation": 2}, Base: []int{1, 1, 2, 3, 0, 0, 0}, Check: []int{0, 1, 1, 1, 2, 3, 4}}
+)
+
+func request_Relations_Watch_0(ctx context.Context, marshaler runtime.Marshaler, client RelationsClient, req *http.Request, pathParams map[string]string) (Relations_WatchClient, runtime.ServerMetadata, error) {
+	var protoReq WatchRelationRequest
+	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["from"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "from")
+	}
+
+	protoReq.From, err = runtime.String(val)
+
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "from", err)
+	}
+
+	val, ok = pathParams["to"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "to")
+	}
+
+	protoReq.To, err = runtime.String(val)
+
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "to", err)
+	}
+
+	val, ok = pathParams["relation"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "relation")
+	}
+
+	protoReq.Relation, err = runtime.String(val)
+
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "relation", err)
+	}
+
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Relations_Watch_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	stream, err := client.Watch(ctx, &protoReq)
+	if err != nil {
+		return nil, metadata, err
+	}
+	header, err := stream.Header()
+	if err != nil {
+		return nil, metadata, err
+	}
+	metadata.HeaderMD = header
+	return stream, metadata, nil
+
+}
+
 // RegisterObjectsHandlerServer registers the http handlers for service Objects to "mux".
 // UnaryRPC     :call ObjectsServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
@@ -1911,6 +2051,26 @@ func RegisterRelationTypesHandlerServer(ctx context.Context, mux *runtime.ServeM
 
 	})
 
+	mux.Handle("GET", pattern_RelationTypes_Get_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_RelationTypes_Get_0(rctx, inboundMarshaler, server, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_RelationTypes_Get_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	mux.Handle("DELETE", pattern_RelationTypes_Delete_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -2037,6 +2197,13 @@ func RegisterRelationsHandlerServer(ctx context.Context, mux *runtime.ServeMux, 
 
 		forward_Relations_List_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
+	})
+
+	mux.Handle("GET", pattern_Relations_Watch_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		err := status.Error(codes.Unimplemented, "streaming calls are not yet supported in the in-process transport")
+		_, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+		return
 	})
 
 	return nil
@@ -2518,6 +2685,26 @@ func RegisterRelationTypesHandlerClient(ctx context.Context, mux *runtime.ServeM
 
 	})
 
+	mux.Handle("GET", pattern_RelationTypes_Get_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateContext(ctx, mux, req)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_RelationTypes_Get_0(rctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_RelationTypes_Get_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	mux.Handle("DELETE", pattern_RelationTypes_Delete_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -2548,6 +2735,8 @@ var (
 
 	pattern_RelationTypes_List_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "api", "relation_types"}, "", runtime.AssumeColonVerbOpt(true)))
 
+	pattern_RelationTypes_Get_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "api", "relation_types", "name"}, "", runtime.AssumeColonVerbOpt(true)))
+
 	pattern_RelationTypes_Delete_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "api", "relation_types", "name"}, "", runtime.AssumeColonVerbOpt(true)))
 )
 
@@ -2557,6 +2746,8 @@ var (
 	forward_RelationTypes_Update_0 = runtime.ForwardResponseMessage
 
 	forward_RelationTypes_List_0 = runtime.ForwardResponseMessage
+
+	forward_RelationTypes_Get_0 = runtime.ForwardResponseMessage
 
 	forward_RelationTypes_Delete_0 = runtime.ForwardResponseMessage
 )
@@ -2699,6 +2890,26 @@ func RegisterRelationsHandlerClient(ctx context.Context, mux *runtime.ServeMux, 
 
 	})
 
+	mux.Handle("GET", pattern_Relations_Watch_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateContext(ctx, mux, req)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Relations_Watch_0(rctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_Relations_Watch_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+
+	})
+
 	return nil
 }
 
@@ -2712,6 +2923,8 @@ var (
 	pattern_Relations_Delete_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4, 2, 5, 1, 0, 4, 1, 5, 6, 1, 0, 4, 1, 5, 7, 1, 0, 4, 1, 5, 8}, []string{"v1", "api", "objects", "from.type", "from.name", "relations", "relation", "to.type", "to.name"}, "", runtime.AssumeColonVerbOpt(true)))
 
 	pattern_Relations_List_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"v1", "api", "relations", "from", "to", "relation"}, "", runtime.AssumeColonVerbOpt(true)))
+
+	pattern_Relations_Watch_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5, 2, 6}, []string{"v1", "api", "relations", "from", "to", "relation", "watch"}, "", runtime.AssumeColonVerbOpt(true)))
 )
 
 var (
@@ -2724,4 +2937,6 @@ var (
 	forward_Relations_Delete_0 = runtime.ForwardResponseMessage
 
 	forward_Relations_List_0 = runtime.ForwardResponseMessage
+
+	forward_Relations_Watch_0 = runtime.ForwardResponseStream
 )

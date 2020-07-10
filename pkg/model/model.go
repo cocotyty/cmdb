@@ -61,8 +61,8 @@ type ObjectState struct {
 
 type Object struct {
 	ID              int    `db:"id"`
-	TypeID          int    `db:"type_id"`
-	Name            string `db:"name"`
+	TypeID          int    `db:"type_id" table:"index:TypeName,unique"`
+	Name            string `db:"name" table:"index:TypeName,unique"`
 	Version         uint64 `db:"version"`
 	RelationVersion uint64 `db:"relation_version"`
 	Description     string `db:"description"`
@@ -179,9 +179,9 @@ type DeletedObjectRelationType struct {
 }
 
 type ObjectRelation struct {
-	FromObjectID   int `db:"from_object_id"`
-	RelationTypeID int `db:"relation_type_id"`
-	ToObjectID     int `db:"to_object_id"`
+	FromObjectID   int `db:"from_object_id" table:"index:ID,unique"`
+	RelationTypeID int `db:"relation_type_id" table:"index:ID,unique"`
+	ToObjectID     int `db:"to_object_id" table:"index:ID,unique"`
 	// Default: CURRENT_TIMESTAMP
 	CreateTime time.Time `db:"create_time"`
 	// Default: CURRENT_TIMESTAMP
@@ -214,10 +214,10 @@ type ObjectRelationMeta struct {
 }
 
 type ObjectRelationMetaValue struct {
-	FromObjectID   int    `db:"from_object_id"`
-	RelationTypeID int    `db:"relation_type_id"`
-	ToObjectID     int    `db:"to_object_id"`
-	MetaID         int    `db:"meta_id"`
+	FromObjectID   int    `db:"from_object_id" table:"index:ID,unique;index:RelationID"`
+	RelationTypeID int    `db:"relation_type_id" table:"index:ID,unique;index:RelationID"`
+	ToObjectID     int    `db:"to_object_id" table:"index:ID,unique;index:RelationID"`
+	MetaID         int    `db:"meta_id" table:"index:ID,unique"`
 	Value          string `db:"value"`
 	// Default: CURRENT_TIMESTAMP
 	CreateTime time.Time  `db:"create_time"`

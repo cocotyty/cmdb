@@ -20,36 +20,71 @@ import (
 var log = loggo.GetLogger("cache")
 
 type Objects struct {
-	name               string
-	id                 int
-	loaded             bool
-	memory             objects.Database
-	handlers           []storage.FilterWatcher
-	typ                *Types
-	objects            map[int]*v1.Object
-	mutex              sync.RWMutex
-	bufferedEvents     [][]cdc.Event
-	released           bool
-	releaseLaterCancel chan struct{}
-	releaseCallback    func()
-	stopCheckSignal    chan struct{}
+	name            string
+	id              int
+	loaded          bool
+	memory          objects.Database
+	handlers        []storage.FilterWatcher
+	typ             *Types
+	objects         map[int]*v1.Object
+	mutex           sync.RWMutex
+	bufferedEvents  [][]cdc.Event
+	releaseCallback func()
+	ref             *ReferenceManager
 }
 
-func NewObjects(typ *Types, id int, name string) *Objects {
+func NewObjects(typ *Types, id int, name string, releaseCallback func()) *Objects {
 	o := &Objects{
 		name:            name,
 		id:              id,
 		typ:             typ,
 		objects:         map[int]*v1.Object{},
 		mutex:           sync.RWMutex{},
-		stopCheckSignal: make(chan struct{}, 1),
+		releaseCallback: releaseCallback,
 	}
-	go o.selfCheck()
 	return o
+}
+
+func (t *Objects) Size() int {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	return len(t.objects)
+}
+
+func (t *Objects) StartGC() {
+	t.ref = NewReferenceManager(t.releaseCallback, time.Second*5, time.Second*10)
 }
 
 func (t *Objects) ResetBuffer() {
 	t.bufferedEvents = nil
+}
+
+func (t *Objects) Ref() bool {
+	return t.ref.Ref()
+}
+
+func (t *Objects) UnRef() {
+	t.ref.UnRef()
+}
+
+func (t *Objects) GetByID(id int) *v1.Object {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	o, ok := t.memory.ObjectTable.GetByID(id)
+	if !ok {
+		return nil
+	}
+	return t.convert(o)
+}
+
+func (t *Objects) GetByName(name string) *v1.Object {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	o, ok := t.memory.ObjectTable.GetByTypeName(t.id, name)
+	if !ok {
+		return nil
+	}
+	return t.convert(o)
 }
 
 func (t *Objects) LoadData(ctx context.Context, db *sqlx.DB) error {
@@ -96,85 +131,17 @@ func (t *Objects) RemoveFilterWatcher(f storage.FilterWatcher) {
 		}
 	}
 	t.handlers = nHandlers
-	if len(t.handlers) == 0 {
-		t.releaseLater()
-	}
+	t.ref.UnRef()
 	t.mutex.Unlock()
-}
-
-const releaseDelay = time.Second * 5
-
-func (t *Objects) release() {
-	t.stopCheckSignal <- struct{}{}
-	t.releaseCallback()
-
-}
-
-func (t *Objects) selfCheck() {
-	ticker := time.NewTicker(time.Second)
-	for {
-		select {
-		case <-ticker.C:
-			time.Sleep(time.Second)
-			t.mutex.Lock()
-			if len(t.handlers) == 0 {
-				t.releaseLater()
-			}
-			t.mutex.Unlock()
-		case <-t.stopCheckSignal:
-			ticker.Stop()
-			return
-		}
-	}
-}
-
-func (t *Objects) releaseLater() {
-	if t.releaseLaterCancel != nil {
-		return
-	}
-	cancel := make(chan struct{}, 1)
-	t.releaseLaterCancel = cancel
-	timer := time.NewTimer(releaseDelay)
-	go func() {
-		select {
-		case <-timer.C:
-			t.mutex.Lock()
-			defer t.mutex.Unlock()
-			if t.releaseLaterCancel == nil {
-				return
-			}
-			t.releaseLaterCancel = nil
-			t.released = true
-			t.release()
-		case <-cancel:
-			if !timer.Stop() {
-				<-timer.C
-			}
-			return
-		}
-	}()
-}
-
-func (t *Objects) cancelRelease() {
-	if t.releaseLaterCancel != nil {
-		cancel := t.releaseLaterCancel
-		t.releaseLaterCancel = nil
-		select {
-		case cancel <- struct{}{}:
-		default:
-		}
-	}
 }
 
 var ErrReleased = errors.New("cache released")
 
 func (t *Objects) AddFilterWatcher(f storage.FilterWatcher) error {
 	t.mutex.Lock()
-	if t.released {
-		t.mutex.Unlock()
+	if !t.ref.Ref() {
 		return ErrReleased
 	}
-	t.cancelRelease()
 	t.handlers = append(t.handlers, f)
 	t.mutex.Unlock()
 	f.OnInit(t.Filter(f))
@@ -251,6 +218,8 @@ func (t *Objects) OnEvents(events []cdc.Event) {
 					continue
 				}
 				updateObjects = append(updateObjects, row.ID)
+			case cdc.Delete:
+				deleteObjects = append(deleteObjects, row.ID)
 			}
 		case *model.ObjectMetaValue:
 			needEvents = append(needEvents, event)

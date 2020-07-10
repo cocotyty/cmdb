@@ -21,6 +21,8 @@ import (
 	model "github.com/zhihu/cmdb/pkg/model"
 )
 
+func noop(_ interface{}) {}
+
 type RichObject struct {
 	model.Object
 	// has_many
@@ -28,11 +30,13 @@ type RichObject struct {
 }
 
 type ObjectTable struct {
-	ID map[IndexObjectID]*RichObject
+	ID       map[IndexObjectID]*RichObject
+	TypeName map[IndexObjectTypeName]*RichObject
 }
 
 func (t *ObjectTable) Init() {
 	t.ID = map[IndexObjectID]*RichObject{}
+	t.TypeName = map[IndexObjectTypeName]*RichObject{}
 
 }
 
@@ -40,8 +44,17 @@ type IndexObjectID struct {
 	ID int
 }
 
+type IndexObjectTypeName struct {
+	TypeID int
+	Name   string
+}
+
 func (t *ObjectTable) GetByID(ID int) (row *RichObject, ok bool) {
 	row, ok = t.ID[IndexObjectID{ID: ID}]
+	return
+}
+func (t *ObjectTable) GetByTypeName(TypeID int, Name string) (row *RichObject, ok bool) {
+	row, ok = t.TypeName[IndexObjectTypeName{TypeID: TypeID, Name: Name}]
 	return
 }
 
@@ -109,6 +122,16 @@ func (d *Database) InsertObject(row *model.Object) (ok bool) {
 
 	}
 
+	{
+		var index = IndexObjectTypeName{row.TypeID, row.Name}
+		_, ok := d.ObjectTable.TypeName[index]
+		if ok {
+			return false
+		}
+		d.ObjectTable.TypeName[index] = richRow
+
+	}
+
 	{ // has_many
 		richRow.ObjectMetaValue = map[IndexObjectMetaValueID]*RichObjectMetaValue{}
 		var list = d.ObjectMetaValueTable.FilterByObjectID(row.ID)
@@ -140,10 +163,17 @@ func (d *Database) DeleteObject(row *model.Object) (ok bool) {
 	if !ok {
 		return false
 	}
+	noop(richRow)
 
 	{
 		var index = IndexObjectID{row.ID}
 		delete(d.ObjectTable.ID, index)
+
+	}
+
+	{
+		var index = IndexObjectTypeName{row.TypeID, row.Name}
+		delete(d.ObjectTable.TypeName, index)
 
 	}
 
@@ -210,6 +240,7 @@ func (d *Database) DeleteObjectMetaValue(row *model.ObjectMetaValue) (ok bool) {
 	if !ok {
 		return false
 	}
+	noop(richRow)
 
 	{
 		var index = IndexObjectMetaValueID{row.ObjectID, row.MetaID}

@@ -48,7 +48,7 @@ Condition :
 	| MetaName EqualOperator Value          << &ast.Requirement{Key:$0.(string),Operator:ast.Equals,Value:[]string{$2.(string)}},nil >>
 	| MetaName ExistOperator                << &ast.Requirement{Key:$0.(string),Operator:$1.(ast.Operator)},nil >>
 	| "!" MetaName                          << &ast.Requirement{Key:$1.(string),Operator:ast.Negates},nil >>
-	| MetaName                              << &ast.Requirement{Key:$1.(string),Operator:ast.Positive},nil >>
+	| MetaName                              << &ast.Requirement{Key:$0.(string),Operator:ast.Positive},nil >>
 ;
 
 

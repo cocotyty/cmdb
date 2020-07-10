@@ -52,7 +52,11 @@ const GetTSTimeout = time.Millisecond * 1000
 func (s *Storage) GetTS(ctx context.Context) (ts uint64, err error) {
 	timeout, cancelFunc := context.WithTimeout(ctx, GetTSTimeout)
 	defer cancelFunc()
-	return s.tsGetter.Get(timeout)
+	ts, err = s.tsGetter.Get(timeout)
+	if err != nil {
+		return 0, internalError(err)
+	}
+	return ts, nil
 }
 
 func (s *Storage) getType(obj *v1.Object) (typID, statusID, stateID int, namedMeta map[string]model.ObjectMeta, err error) {

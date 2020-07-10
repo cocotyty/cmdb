@@ -62,7 +62,7 @@ message ObjectMetaValue {
 
 // Objects service define:
 
-message ObjectListRequest {
+message ListObjectRequest {
     string type = 1;
     ObjectView view = 2;
     string query = 3;
@@ -71,18 +71,18 @@ message ObjectListRequest {
     bool show_deleted = 6;
 }
 
-message ObjectGetRequest {
+message GetObjectRequest {
     string type = 1;
     string name = 2;
     ObjectView view = 3;
 }
 
-message ObjectDeleteRequest {
+message DeleteObjectRequest {
     string type = 1;
     string name = 2;
 }
 
-message ObjectListResponse {
+message ListObjectResponse {
     string kind = 1;
     repeated Object objects = 2;
     string next_page_token = 3;
@@ -101,7 +101,7 @@ enum WatchEventType {
     DELETE = 3;
 }
 
-message ObjectWatchEvent {
+message ObjectEvent {
     repeated Object objects = 1;
     WatchEventType type = 2;
 }
@@ -113,17 +113,17 @@ message ObjectUpdateRequest {
 }
 
 service Objects {
-    rpc List (ObjectListRequest) returns (ObjectListResponse) {
+    rpc List (ListObjectRequest) returns (ListObjectResponse) {
         option (google.api.http) = {
             get: "/v1/api/objects/{type}"
         };
     };
-    rpc Get (ObjectGetRequest) returns (Object) {
+    rpc Get (GetObjectRequest) returns (Object) {
         option (google.api.http) = {
             get: "/v1/api/objects/{type}/{name}"
         };
     };
-    rpc Delete (ObjectDeleteRequest) returns (Object) {
+    rpc Delete (DeleteObjectRequest) returns (Object) {
         option (google.api.http) = {
             delete: "/v1/api/objects/{type}/{name}"
         };
@@ -141,12 +141,12 @@ service Objects {
             body: "*"
         };
     }
-    rpc Watch (ObjectListRequest) returns (stream ObjectWatchEvent) {
+    rpc Watch (ListObjectRequest) returns (stream ObjectEvent) {
         option (google.api.http) = {
             get: "/v1/api/objects/{type}/*/watch"
         };
     }
-    rpc Relations (ObjectGetRequest) returns (ListRelationResponse) {
+    rpc Relations (GetObjectRequest) returns (ListRelationResponse) {
         option (google.api.http) = {
             get: "/v1/api/objects/{type}/{name}/relations"
         };
@@ -168,7 +168,7 @@ message ListObjectTypesResponse {
     repeated ObjectType types = 1;
 }
 
-message ObjectTypeUpdateRequest {
+message UpdateObjectTypeRequest {
     ObjectType type = 1;
     google.protobuf.FieldMask update_mask = 2;
 }
@@ -180,7 +180,7 @@ service ObjectTypes {
             body: "*"
         };
     };
-    rpc Update (ObjectTypeUpdateRequest) returns (ObjectType) {
+    rpc Update (UpdateObjectTypeRequest) returns (ObjectType) {
         option (google.api.http) = {
             put: "/v1/api/object_types"
             body: "*"
@@ -220,7 +220,7 @@ message ListRelationTypesRequest {
     bool consistent = 2;
 }
 
-message RelationTypeUpdateRequest {
+message UpdateRelationTypeRequest {
     RelationType type = 1;
     google.protobuf.FieldMask update_mask = 2;
 }
@@ -236,7 +236,7 @@ service RelationTypes {
             body: "*"
         };
     };
-    rpc Update (RelationTypeUpdateRequest) returns (RelationType) {
+    rpc Update (UpdateRelationTypeRequest) returns (RelationType) {
         option (google.api.http) = {
             put: "/v1/api/relation_types"
             body: "*"
@@ -245,6 +245,11 @@ service RelationTypes {
     rpc List (ListRelationTypesRequest) returns (ListRelationTypesResponse) {
         option (google.api.http) = {
             get: "/v1/api/relation_types"
+        };
+    };
+    rpc Get (RelationType) returns (RelationType) {
+        option (google.api.http) = {
+            get: "/v1/api/relation_types/{name}"
         };
     };
     rpc Delete (RelationType) returns (RelationType) {
@@ -269,6 +274,16 @@ message Relation {
     google.protobuf.Timestamp delete_time = 9;
 }
 
+message RichRelation {
+    string relation = 1;
+    Object from = 2;
+    Object to = 3;
+    map<string, ObjectMetaValue> metas = 6;
+    google.protobuf.Timestamp create_time = 7;
+    google.protobuf.Timestamp update_time = 8;
+    google.protobuf.Timestamp delete_time = 9;
+}
+
 message UpdateRelationRequest {
     Relation relation = 1;
     google.protobuf.FieldMask update_mask = 2;
@@ -280,8 +295,20 @@ message ListRelationRequest {
     string relation = 3;
 }
 
+message WatchRelationRequest {
+    string from = 1;
+    string to = 2;
+    string relation = 3;
+    string query = 4;
+}
+
 message ListRelationResponse {
     repeated Relation relations = 1;
+}
+
+message RelationEvent {
+    repeated RichRelation relations = 1;
+    WatchEventType type = 2;
 }
 
 service Relations {
@@ -312,4 +339,9 @@ service Relations {
             get: "/v1/api/relations/{from}/{to}/{relation}"
         };
     };
+    rpc Watch (WatchRelationRequest) returns (stream RelationEvent) {
+        option (google.api.http) = {
+            get: "/v1/api/relations/{from}/{to}/{relation}/watch"
+        };
+    }
 }

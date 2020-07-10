@@ -53,7 +53,6 @@ func (x *ObjectMetaValue) UnmarshalJSONPB(_ *jsonpb.Unmarshaler, data []byte) (e
 	case bool:
 		x.ValueType = ValueType_BOOLEAN
 		x.Value = strconv.FormatBool(c)
-		return nil
 	case json.Number:
 		if strings.Contains(string(c), ".") {
 			x.ValueType = ValueType_DOUBLE
@@ -65,8 +64,10 @@ func (x *ObjectMetaValue) UnmarshalJSONPB(_ *jsonpb.Unmarshaler, data []byte) (e
 	case string:
 		x.ValueType = ValueType_STRING
 		x.Value = c
+	default:
+		return ErrUnknownValueType
 	}
-	return ErrUnknownValueType
+	return nil
 }
 
 var ErrUnknownValueType = errors.New("unknown value type")

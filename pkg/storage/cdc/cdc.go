@@ -82,3 +82,34 @@ func Register(name string, builder func(source string) (Watcher, error)) {
 	drivers[name] = builder
 	lock.Unlock()
 }
+
+type Handlers struct {
+	mutex    sync.Mutex
+	handlers map[EventHandler]struct{}
+}
+
+func (c *Handlers) AddEventHandler(handler EventHandler) {
+	c.mutex.Lock()
+	if c.handlers == nil {
+		c.handlers = map[EventHandler]struct{}{}
+	}
+	c.handlers[handler] = struct{}{}
+	c.mutex.Unlock()
+}
+
+func (c *Handlers) RemoveEventHandler(handler EventHandler) {
+	c.mutex.Lock()
+	if c.handlers == nil {
+		c.handlers = map[EventHandler]struct{}{}
+	}
+	delete(c.handlers, handler)
+	c.mutex.Unlock()
+}
+
+func (c *Handlers) Broadcast(events []Event) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	for handler := range c.handlers {
+		handler.OnEvents(events)
+	}
+}

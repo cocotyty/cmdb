@@ -121,6 +121,11 @@ func (s *Storage) UpdateRelationType(ctx context.Context, typ *v1.RelationType, 
 	if err != nil {
 		return nil, err
 	}
+	if len(paths) == 0 {
+		paths = []string{
+			"description", "metas",
+		}
+	}
 	for _, path := range paths {
 		fields := strings.Split(path, ".")
 		switch fields[0] {
@@ -257,6 +262,19 @@ func (s *Storage) getRelationType(ctx context.Context, tx *sqlx.Tx, name string,
 		return nil, err
 	}
 	typ.Metas = metas
+	return typ, nil
+}
+
+func (s *Storage) GetRelationType(ctx context.Context, name string, from string, to string) (*v1.RelationType, error) {
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return nil, internalError(err)
+	}
+	defer tx.Rollback()
+	typ, err := s.getRelationType(ctx, tx, name, from, to)
+	if err != nil {
+		return nil, err
+	}
 	return typ, nil
 }
 

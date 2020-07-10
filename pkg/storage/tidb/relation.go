@@ -25,6 +25,7 @@ import (
 	v1 "github.com/zhihu/cmdb/pkg/api/v1"
 	"github.com/zhihu/cmdb/pkg/model"
 	"github.com/zhihu/cmdb/pkg/model/typetables"
+	"github.com/zhihu/cmdb/pkg/storage"
 	"github.com/zhihu/cmdb/pkg/tools/sqly"
 )
 
@@ -65,6 +66,38 @@ func (s *Storage) loadRelationTypes(fromType string, toType string, relation str
 	return metas, relationTypeID, fromTypeID, toTypeID
 }
 
+func (s *Storage) getRelationObjects(ctx context.Context, tx *sqlx.Tx, ts uint64, fromTypeID int, toTypeID int, fromName string, toName string) (fromObject, toObject *model.Object, err error) {
+	fromObject = &model.Object{}
+	toObject = &model.Object{}
+	var objects []*model.Object
+
+	err = tx.SelectContext(ctx, &objects,
+		"select  * from object where ( type_id = ? and name = ?) or ( type_id=? and name = ?) for update",
+		fromTypeID, fromName, toTypeID, toName,
+	)
+	if len(objects) < 2 {
+		return nil, nil, notFound("object not found")
+	}
+
+	for _, object := range objects {
+		if ts != 0 {
+			if object.RelationVersion > ts {
+				return nil, nil, aborted("operation conflict")
+			}
+		}
+		if object.Name == fromName && object.TypeID == fromTypeID {
+			fromObject = object
+		}
+		if object.Name == toName && object.TypeID == toTypeID {
+			toObject = object
+		}
+	}
+	if fromObject.ID == 0 || toObject.ID == 0 {
+		return nil, nil, notFound("object not found")
+	}
+	return fromObject, toObject, nil
+}
+
 func (s *Storage) CreateRelation(ctx context.Context, relation *v1.Relation) (created *v1.Relation, err error) {
 	metas, relationTypeID, fromTypeID, toTypeID := s.loadRelationTypes(relation.From.Type, relation.To.Type, relation.Relation)
 	if relationTypeID == 0 {
@@ -79,31 +112,9 @@ func (s *Storage) CreateRelation(ctx context.Context, relation *v1.Relation) (cr
 		return nil, internalError(err)
 	}
 	defer tx.Rollback()
-	var fromObject = &model.Object{}
-	var toObject = &model.Object{}
-	var objects []*model.Object
-
-	err = tx.SelectContext(ctx, &objects,
-		"select  * from object where ( type_id = ? and name = ?) or ( type_id=? and name = ?) for update",
-		fromTypeID, relation.From.Name, ts, toTypeID, relation.To.Name, ts,
-	)
-	if len(objects) < 2 {
-		return nil, notFound("object not found")
-	}
-
-	for _, object := range objects {
-		if object.RelationVersion > ts {
-			return nil, aborted("operation conflict")
-		}
-		if object.Name == relation.From.Name && object.TypeID == fromTypeID {
-			fromObject = object
-		}
-		if object.Name == relation.To.Name && object.TypeID == toTypeID {
-			toObject = object
-		}
-	}
-	if fromObject.ID == 0 || toObject.ID == 0 {
-		return nil, notFound("object not found")
+	fromObject, toObject, err := s.getRelationObjects(ctx, tx, ts, fromTypeID, toTypeID, relation.From.Name, relation.To.Name)
+	if err != nil {
+		return nil, err
 	}
 	now := time.Now()
 	e := &sqly.Execer{
@@ -117,17 +128,22 @@ func (s *Storage) CreateRelation(ctx context.Context, relation *v1.Relation) (cr
 	e.Exec("update object set relation_version = ? where id in (?,?)", ts, fromObject.ID, toObject.ID)
 
 	for name, value := range relation.Metas {
-		metaId, ok := metas.byName[name]
+		m, ok := metas.byName[name]
 		if !ok {
 			continue
 		}
 		e.Exec("insert into object_relation_meta_value (from_object_id, relation_type_id, to_object_id, meta_id, value, create_time) VALUES (?,?,?,?,?,?)",
-			fromObject.ID, relationTypeID, toObject.ID, metaId, value.Value, now,
+			fromObject.ID, relationTypeID, toObject.ID, m.ID, value.Value, now,
 		)
 	}
 	if e.Err != nil {
 		return nil, internalError(err)
 	}
+	err = tx.Commit()
+	if err != nil {
+		return nil, internalError(err)
+	}
+
 	relation.CreateTime, _ = ptypes.TimestampProto(now)
 	relation.UpdateTime = nil
 	relation.DeleteTime = nil
@@ -146,7 +162,7 @@ func (s *Storage) GetRelation(ctx context.Context, from *v1.ObjectReference, to 
 	}
 	defer tx.Rollback()
 	rel, err = s.getRelation(ctx, tx, relationType, from, to, relationTypeID, fromTypeID, toTypeID, metas)
-	return rel, nil
+	return rel, err
 }
 
 func (s *Storage) getRelationByID(ctx context.Context, tx *sqlx.Tx, relationTypeID, fromObjectID, toObjectID int) (*model.ObjectRelation, error) {
@@ -168,7 +184,7 @@ func (s *Storage) getRelationByID(ctx context.Context, tx *sqlx.Tx, relationType
 
 func (s *Storage) getRelationMetasByID(ctx context.Context, tx *sqlx.Tx, relationTypeID, fromObjectID, toObjectID int) ([]*model.ObjectRelationMetaValue, error) {
 	var values []*model.ObjectRelationMetaValue
-	err := tx.GetContext(ctx, &values, "select * from object_relation_meta_value where relation_type_id = ? and from_object_id = ? and to_object_id = ?",
+	err := tx.SelectContext(ctx, &values, "select * from object_relation_meta_value where relation_type_id = ? and from_object_id = ? and to_object_id = ?",
 		relationTypeID, fromObjectID, toObjectID,
 	)
 	if err != nil {
@@ -395,35 +411,16 @@ func (s *Storage) UpdateRelation(ctx context.Context, relation *v1.Relation, pat
 		return nil, internalError(err)
 	}
 	defer tx.Rollback()
-	var fromObject = &model.Object{}
-	var toObject = &model.Object{}
-	var objects []*model.Object
-
-	err = tx.SelectContext(ctx, &objects,
-		"select  * from object where ( type_id = ? and name = ?) or ( type_id=? and name = ?) for update",
-		fromTypeID, relation.From.Name, ts, toTypeID, relation.To.Name, ts,
-	)
-	if len(objects) < 2 {
-		return nil, notFound("object not found")
-	}
-
-	for _, object := range objects {
-		if object.RelationVersion > ts {
-			return nil, aborted("operation conflict")
-		}
-		if object.Name == relation.From.Name && object.TypeID == fromTypeID {
-			fromObject = object
-		}
-		if object.Name == relation.To.Name && object.TypeID == toTypeID {
-			toObject = object
-		}
-	}
-	if fromObject.ID == 0 || toObject.ID == 0 {
-		return nil, notFound("object not found")
+	fromObject, toObject, err := s.getRelationObjects(ctx, tx, ts, fromTypeID, toTypeID, relation.From.Name, relation.To.Name)
+	if err != nil {
+		return nil, err
 	}
 	e := &sqly.Execer{
 		Ctx: ctx,
 		Tx:  tx,
+	}
+	if len(paths) == 0 {
+		paths = []string{"metas"}
 	}
 	for _, path := range paths {
 		fields := strings.Split(path, ".")
@@ -454,11 +451,21 @@ func (s *Storage) UpdateRelation(ctx context.Context, relation *v1.Relation, pat
 						)
 						continue
 					}
+					if metaValue == nil {
+						m := metas.byName[name]
+						if m == nil {
+							continue
+						}
+						e.Exec("insert into object_relation_meta_value (from_object_id, relation_type_id, to_object_id, meta_id, value, create_time) VALUES (?,?,?,?,?,?)",
+							fromObject.ID, relationTypeID, toObject.ID, m.ID, value.Value, time.Now(),
+						)
+						continue
+					}
 					if value.Value == metaValue.Value {
 						continue
 					}
 					e.Exec("update object_relation_meta_value set delete_time = null , value = ? where meta_id = ? and relation_type_id =? and from_object_id = ? and to_object_id = ?",
-						metaValue.Value, metaValue.MetaID, metaValue.RelationTypeID, metaValue.FromObjectID, metaValue.ToObjectID,
+						value.Value, metaValue.MetaID, metaValue.RelationTypeID, metaValue.FromObjectID, metaValue.ToObjectID,
 					)
 				}
 				for name, value := range nameOrigin {
@@ -511,11 +518,15 @@ func (s *Storage) UpdateRelation(ctx context.Context, relation *v1.Relation, pat
 }
 
 func (s *Storage) getRelation(ctx context.Context, tx *sqlx.Tx, relationType string, from *v1.ObjectReference, to *v1.ObjectReference, relationTypeID, fromTypeID, toTypeID int, metas relationTypeMetas) (rel *v1.Relation, err error) {
-	relation, err := s.getRelationByID(ctx, tx, relationTypeID, fromTypeID, toTypeID)
+	fromObject, toObject, err := s.getRelationObjects(ctx, tx, 0, fromTypeID, toTypeID, from.Name, to.Name)
 	if err != nil {
 		return nil, err
 	}
-	relMetas, err := s.getRelationMetasByID(ctx, tx, relationTypeID, fromTypeID, toTypeID)
+	relation, err := s.getRelationByID(ctx, tx, relationTypeID, fromObject.ID, toObject.ID)
+	if err != nil {
+		return nil, err
+	}
+	relMetas, err := s.getRelationMetasByID(ctx, tx, relationTypeID, fromObject.ID, toObject.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -618,4 +629,18 @@ func (s *Storage) DeleteRelation(ctx context.Context, relation *v1.Relation) (up
 		return nil, internalError(err)
 	}
 	return rel, nil
+}
+
+func (s *Storage) WatchRelation(ctx context.Context, from, to, relation string, f storage.RelationFilterWatcher) error {
+	rel, err := s.cache.GetRelations(ctx, from, to, relation)
+	if err != nil {
+		return internalError(err)
+	}
+	err = rel.AddFilterWatcher(f)
+	if err != nil {
+		return internalError(err)
+	}
+	<-ctx.Done()
+	rel.RemoveFilterWatcher(f)
+	return nil
 }

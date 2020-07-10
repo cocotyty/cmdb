@@ -102,13 +102,13 @@ var productionsTable = ProdTab{
 		},
 	},
 	ProdTabEntry{
-		String: `Condition : MetaName	<< &ast.Requirement{Key:X[1].(string),Operator:ast.Positive},nil >>`,
+		String: `Condition : MetaName	<< &ast.Requirement{Key:X[0].(string),Operator:ast.Positive},nil >>`,
 		Id:         "Condition",
 		NTType:     2,
 		Index:      8,
 		NumSymbols: 1,
 		ReduceFunc: func(X []Attrib) (Attrib, error) {
-			return &ast.Requirement{Key: X[1].(string), Operator: ast.Positive}, nil
+			return &ast.Requirement{Key: X[0].(string), Operator: ast.Positive}, nil
 		},
 	},
 	ProdTabEntry{

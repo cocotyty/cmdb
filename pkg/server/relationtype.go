@@ -18,18 +18,40 @@ import (
 
 	v1 "github.com/zhihu/cmdb/pkg/api/v1"
 	"github.com/zhihu/cmdb/pkg/storage"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type RelationTypes struct {
 	Storage storage.Storage
 }
 
+func (r *RelationTypes) Get(ctx context.Context, relationType *v1.RelationType) (*v1.RelationType, error) {
+	if relationType == nil {
+		return nil, status.New(codes.InvalidArgument, "parameter must not be empty").Err()
+	}
+	relationType = v1.CheckRelationType(relationType)
+	return r.Storage.GetRelationType(ctx, relationType.Name, relationType.From, relationType.To)
+}
+
 func (r *RelationTypes) Create(ctx context.Context, relationType *v1.RelationType) (*v1.RelationType, error) {
+	if relationType == nil {
+		return nil, status.New(codes.InvalidArgument, "parameter must not be empty").Err()
+	}
+	relationType = v1.CheckRelationType(relationType)
 	return r.Storage.CreateRelationType(ctx, relationType)
 }
 
-func (r *RelationTypes) Update(ctx context.Context, request *v1.RelationTypeUpdateRequest) (*v1.RelationType, error) {
-	return r.Storage.UpdateRelationType(ctx, request.Type, request.UpdateMask.Paths)
+func (r *RelationTypes) Update(ctx context.Context, request *v1.UpdateRelationTypeRequest) (*v1.RelationType, error) {
+	if request.Type == nil {
+		return nil, status.New(codes.InvalidArgument, "type must not be empty").Err()
+	}
+	request.Type = v1.CheckRelationType(request.Type)
+	var paths []string
+	if request.UpdateMask != nil {
+		paths = request.UpdateMask.Paths
+	}
+	return r.Storage.UpdateRelationType(ctx, request.Type, paths)
 }
 
 func (r *RelationTypes) List(ctx context.Context, request *v1.ListRelationTypesRequest) (*v1.ListRelationTypesResponse, error) {

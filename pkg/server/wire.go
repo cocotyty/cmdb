@@ -30,6 +30,7 @@ var Set = wire.NewSet(
 	wire.Struct(new(Objects), "*"),
 	wire.Struct(new(ObjectTypes), "*"),
 	wire.Struct(new(RelationTypes), "*"),
+	wire.Struct(new(Relations), "*"),
 	wire.Struct(new(Server), "*"),
 	tidb.NewStorage,
 	pd.NewTimestampGetter,

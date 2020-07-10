@@ -52,8 +52,8 @@ func (s *Storage) GetObjectType(ctx context.Context, name string, consistent boo
 	return
 }
 
-func (s *Storage) ListObjectTypes(ctx context.Context, request *v1.ListObjectTypesRequest) (list []*v1.ObjectType, err error) {
-	if !request.ShowDeleted && !request.Consistent {
+func (s *Storage) ListObjectTypes(ctx context.Context, consistent bool, showDeleted bool) (list []*v1.ObjectType, err error) {
+	if !showDeleted && !consistent {
 		s.cache.TypeCache(func(d *typetables.Database) {
 			for _, objectType := range d.ObjectTypeTable.ID {
 				list = append(list, convertFromCache(objectType))
@@ -67,7 +67,7 @@ func (s *Storage) ListObjectTypes(ctx context.Context, request *v1.ListObjectTyp
 	}
 	defer tx.Rollback()
 	var types []*model.ObjectType
-	if request.ShowDeleted {
+	if showDeleted {
 		err = tx.SelectContext(ctx, &types, "select * from object_type;")
 	} else {
 		err = tx.SelectContext(ctx, &types, "select * from object_type where delete_time is null;")
@@ -296,7 +296,11 @@ func (s *Storage) UpdateObjectType(ctx context.Context, paths []string, typ *v1.
 		}
 		return nil, err
 	}
-
+	if len(paths) == 0 {
+		paths = []string{
+			"description", "metas", "statuses",
+		}
+	}
 	for _, path := range paths {
 		names := strings.Split(path, ".")
 		switch names[0] {
