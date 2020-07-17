@@ -69,6 +69,10 @@ func (c *Cache) TypeCache(fn func(d *typetables.Database)) {
 	c.typeCache.Read(fn)
 }
 
+func (c *Cache) WriteCache(fn func(d *typetables.Database)) {
+	c.typeCache.Write(fn)
+}
+
 func (c *Cache) ReloadTypeCache(ctx context.Context, db *sqlx.DB) error {
 	return c.typeCache.InitData(ctx, db)
 }

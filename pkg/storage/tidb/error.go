@@ -41,3 +41,7 @@ func aborted(fmt string, args ...interface{}) error {
 func invalidArguments(fmt string, args ...interface{}) error {
 	return status.Newf(codes.InvalidArgument, fmt, args...).Err()
 }
+
+func PathNotFoundError(path string) error {
+	return status.Newf(codes.InvalidArgument, "path %s not found", path).Err()
+}

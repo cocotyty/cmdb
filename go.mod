@@ -4,7 +4,7 @@ require (
 	github.com/Shopify/sarama v1.26.3
 	github.com/apache/pulsar-client-go v0.1.1
 	github.com/bsm/sarama-cluster v2.1.15+incompatible
-	github.com/cocotyty/forceset v1.0.3
+	github.com/cocotyty/forceset v1.0.4
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gogo/protobuf v1.3.1

@@ -54,6 +54,12 @@ func (c *Types) Read(fn func(d *typetables.Database)) {
 	fn(&c.database)
 }
 
+func (c *Types) Write(fn func(d *typetables.Database)) {
+	c.locker.Lock()
+	defer c.locker.Unlock()
+	fn(&c.database)
+}
+
 func (c *Types) InitData(ctx context.Context, db *sqlx.DB) (err error) {
 	tx, err := db.Beginx()
 	if err != nil {

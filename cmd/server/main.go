@@ -158,7 +158,11 @@ func Run(ctx context.Context, app AppConf) error {
 	httpL := cm.Match(cmux.HTTP1Fast())
 
 	// create grpc server
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.ChainUnaryInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+		resp, err = handler(ctx, req)
+		log.Debugf("%s", info.FullMethod)
+		return
+	}))
 	// create grpc-gateway server
 	gateway := runtime.NewServeMux(runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{OrigName: true, EmitDefaults: true}))
 

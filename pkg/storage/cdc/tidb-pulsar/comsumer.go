@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/zhihu/cmdb/pkg/storage/cdc/ticdc"
@@ -58,11 +59,16 @@ type Consumer struct {
 }
 
 func (c *Consumer) Start() error {
-	consumer, err := c.client.Subscribe(pulsar.ConsumerOptions{
+	opt := pulsar.ConsumerOptions{
 		Topic:            c.topic,
 		SubscriptionName: "cmdb_" + nodename,
 		Type:             pulsar.Exclusive,
-	})
+	}
+	err := c.seekAll(opt)
+	if err != nil {
+		return err
+	}
+	consumer, err := c.client.Subscribe(opt)
 	if err != nil {
 		return err
 	}
@@ -71,10 +77,32 @@ func (c *Consumer) Start() error {
 	return nil
 }
 
+func (c *Consumer) seekAll(opt pulsar.ConsumerOptions) (err error) {
+	now := time.Now()
+	partitions, err := c.client.TopicPartitions(opt.Topic)
+	if err != nil {
+		return err
+	}
+	for _, p := range partitions {
+		opt.Topic = p
+		consumer, err := c.client.Subscribe(opt)
+		if err != nil {
+			return err
+		}
+		err = consumer.SeekByTime(now)
+		if err != nil {
+			return err
+		}
+		consumer.Close()
+	}
+	return nil
+}
+
 func (c *Consumer) receive() {
 	messages := c.consumer.Chan()
 	for msg := range messages {
 		_ = c.Consumer.Consume([]byte(msg.Key()), msg.Payload())
+		c.consumer.Ack(msg)
 	}
 }
 

@@ -89,8 +89,24 @@ func (s *Storage) DeleteObjectType(ctx context.Context, name string) (n *v1.Obje
 	if err != nil {
 		return nil, err
 	}
-	_, err = tx.ExecContext(ctx, "update object_type set delete_time = now() where id = ?", typ.ID)
-	return nil, err
+	recordDB := &EventRecordDB{
+		ctx: ctx,
+		tx:  tx,
+	}
+	now := time.Now()
+	typ.DeleteTime = &now
+	err = recordDB.UpdateObjectType(typ)
+	if err != nil {
+		return nil, err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+	s.cache.WriteCache(func(d *typetables.Database) {
+		d.OnEvents(recordDB.changes)
+	})
+	return n, nil
 }
 
 func (s *Storage) ForceDeleteObjectType(ctx context.Context, name string) (n *v1.ObjectType, err error) {
@@ -132,30 +148,35 @@ func (s *Storage) CreateObjectType(ctx context.Context, typ *v1.ObjectType) (n *
 		return
 	}
 	defer tx.Rollback()
-	result, err := tx.ExecContext(ctx,
-		"insert into object_type (name, description, create_time, delete_time) VALUES (?,?,?,?)",
-		typ.Name, typ.Description,
-		now, nil,
-	)
-	if err != nil {
-		return nil, err
+
+	recorder := eventRecord(ctx, tx)
+
+	var typRow = &model.ObjectType{
+		Name:        typ.Name,
+		Description: typ.Description,
+		CreateTime:  now,
 	}
-	id, err := result.LastInsertId()
+	err = recorder.InsertObjectType(typRow)
 	if err != nil {
 		return nil, err
 	}
 	for _, meta := range typ.Metas {
-		_, err = tx.ExecContext(ctx, "insert into object_meta (type_id, name, value_type, description, create_time, delete_time) VALUES (?,?,?,?,?,?)",
-			id, meta.Name, meta.ValueType, meta.Description, now, nil,
-		)
+		var metaRow = &model.ObjectMeta{
+			TypeID:      typRow.ID,
+			Name:        meta.Name,
+			ValueType:   int(meta.ValueType),
+			Description: meta.Description,
+			CreateTime:  now,
+		}
+		err = recorder.InsertObjectMeta(metaRow)
 		if err != nil {
 			return nil, err
 		}
 	}
 	for _, status := range typ.Statuses {
-		err = s.InsertAllObjectTypeStatus(ctx, tx, status, int(id))
+		err = s.InsertAllObjectTypeStatus(recorder, status, typRow.ID, now)
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 	typ.CreateTime, _ = ptypes.TimestampProto(now)
@@ -163,33 +184,36 @@ func (s *Storage) CreateObjectType(ctx context.Context, typ *v1.ObjectType) (n *
 	if err != nil {
 		return nil, err
 	}
+	s.cache.WriteCache(func(m *typetables.Database) {
+		m.OnEvents(recorder.changes)
+	})
 	return typ, nil
 }
 
-func (s *Storage) InsertAllObjectTypeStatus(ctx context.Context, tx *sqlx.Tx, status *v1.ObjectStatus, id int) (err error) {
-	result, err := tx.ExecContext(ctx, "insert into object_status (type_id, name, description, create_time) VALUES (?,?,?,now())",
-		id, status.Name, status.Description,
-	)
-	if err != nil {
-		return
+func (s *Storage) InsertAllObjectTypeStatus(recorder *EventRecordDB, status *v1.ObjectStatus, typeID int, now time.Time) (err error) {
+	statusRow := &model.ObjectStatus{
+		TypeID:      typeID,
+		Name:        status.Name,
+		Description: status.Description,
+		CreateTime:  now,
 	}
-	statusID, err := result.LastInsertId()
+	err = recorder.InsertObjectStatus(statusRow)
 	if err != nil {
-		return
+		return err
 	}
 	for _, state := range status.States {
-		_, err = tx.ExecContext(ctx, "insert into object_state (status_id, name, description, create_time) VALUES (?,?,?,now())",
-			statusID, state.Name, state.Description,
-		)
+		stateRow := &model.ObjectState{
+			StatusID:    statusRow.ID,
+			Name:        state.Name,
+			Description: state.Description,
+			CreateTime:  now,
+		}
+		err := recorder.InsertObjectState(stateRow)
 		if err != nil {
-			return
+			return err
 		}
 	}
-	return
-}
-
-func PathNotFoundError(path string) error {
-	return errors.Newf(codes.InvalidArgument, "path %s not found", path).Err()
+	return nil
 }
 
 func (s *Storage) loadTypesFromDatabase(ctx context.Context, tx *sqlx.Tx, types []*model.ObjectType) (list []*v1.ObjectType, err error) {
@@ -283,11 +307,13 @@ func (s *Storage) loadTypeFromDatabase(ctx context.Context, tx *sqlx.Tx, name st
 }
 
 func (s *Storage) UpdateObjectType(ctx context.Context, paths []string, typ *v1.ObjectType) (n *v1.ObjectType, err error) {
+	now := time.Now()
 	tx, err := s.db.Beginx()
 	if err != nil {
 		return
 	}
 	defer tx.Rollback()
+	recorder := eventRecord(ctx, tx)
 	var t model.ObjectType
 	err = tx.GetContext(ctx, &t, "select * from object_type where name = ? limit 1 for update", typ.Name)
 	if err != nil {
@@ -305,27 +331,28 @@ func (s *Storage) UpdateObjectType(ctx context.Context, paths []string, typ *v1.
 		names := strings.Split(path, ".")
 		switch names[0] {
 		case "description":
-			err = s.updateObjectTypeDescription(ctx, tx, t.ID, typ.Description)
+			t.Description = typ.Description
+			err = recorder.UpdateObjectType(&t)
 			if err != nil {
 				return nil, err
 			}
 		case "metas":
 			if len(names) == 1 {
-				err = s.updateObjectTypeMetas(ctx, tx, &t, typ)
+				err = s.updateObjectTypeMetas(ctx, tx, recorder, &t, typ)
 				if err != nil {
 					return nil, err
 				}
 				continue
 			}
 			if len(names) == 2 {
-				err = s.updateObjectTypeMeta(ctx, tx, &t, typ.Metas[names[1]])
+				err = s.updateObjectTypeMeta(ctx, tx, recorder, &t, typ.Metas[names[1]])
 				if err != nil {
 					return nil, err
 				}
 				continue
 			}
 			if len(names) == 3 {
-				err = s.updateObjectTypeMetaField(ctx, tx, &t, typ.Metas[names[1]], names[2])
+				err = s.updateObjectTypeMetaField(ctx, tx, recorder, &t, typ.Metas[names[1]], names[2])
 				if err != nil {
 					return nil, err
 				}
@@ -333,7 +360,7 @@ func (s *Storage) UpdateObjectType(ctx context.Context, paths []string, typ *v1.
 			}
 		case "statuses":
 			if len(names) == 1 {
-				err = s.updateObjectTypeStatues(ctx, tx, t.ID, typ.Statuses)
+				err = s.updateObjectTypeStatues(ctx, tx, recorder, t.ID, typ.Statuses)
 				if err != nil {
 					return nil, err
 				}
@@ -348,13 +375,15 @@ func (s *Storage) UpdateObjectType(ctx context.Context, paths []string, typ *v1.
 				}
 				status := typ.Statuses[name]
 				if status == nil {
-					err = s.deleteObjectTypeStatus(ctx, tx, origin)
+					origin.DeleteTime = &now
+					err = recorder.UpdateObjectStatus(origin)
 					if err != nil {
 						return nil, err
 					}
 					continue
 				}
-				err = s.updateObjectTypeStatus(ctx, tx, origin, status)
+				origin.Description = status.Description
+				err = s.updateObjectTypeStatus(recorder, origin, status)
 				if err != nil {
 					return nil, err
 				}
@@ -373,12 +402,12 @@ func (s *Storage) UpdateObjectType(ctx context.Context, paths []string, typ *v1.
 				}
 				switch names[2] {
 				case "states":
-					err := s.updateObjectTypeStatusStates(ctx, tx, origin, status)
+					err := s.updateObjectTypeStatusStates(recorder, origin, status)
 					if err != nil {
 						return nil, err
 					}
 				case "description":
-					err := s.updateObjectTypeStatusDescription(ctx, tx, origin, status)
+					err := s.updateObjectTypeStatusDescription(recorder, origin, status)
 					if err != nil {
 						return nil, err
 					}
@@ -407,7 +436,7 @@ func (s *Storage) UpdateObjectType(ctx context.Context, paths []string, typ *v1.
 					if origin == nil {
 						continue
 					}
-					err = s.deleteObjectTypeState(ctx, tx, origin)
+					err = s.deleteObjectTypeState(recorder, origin)
 					if err != nil {
 						return nil, err
 					}
@@ -418,7 +447,7 @@ func (s *Storage) UpdateObjectType(ctx context.Context, paths []string, typ *v1.
 					if origin == nil {
 						continue
 					}
-					err = s.deleteObjectTypeState(ctx, tx, origin)
+					err = s.deleteObjectTypeState(recorder, origin)
 					if err != nil {
 						return nil, err
 					}
@@ -432,12 +461,12 @@ func (s *Storage) UpdateObjectType(ctx context.Context, paths []string, typ *v1.
 					if err != nil {
 						return nil, err
 					}
-					err = s.insertObjectTypeState(ctx, tx, originStatus.ID, state)
+					err = s.insertObjectTypeState(recorder, originStatus.ID, state)
 					if err != nil {
 						return nil, err
 					}
 				}
-				err = s.updateObjectTypeState(ctx, tx, origin, state)
+				err = s.updateObjectTypeState(recorder, origin, state)
 				if err != nil {
 					return nil, err
 				}
@@ -470,7 +499,7 @@ func (s *Storage) UpdateObjectType(ctx context.Context, paths []string, typ *v1.
 					}
 					return nil, err
 				}
-				err = s.updateObjectTypeState(ctx, tx, origin, state)
+				err = s.updateObjectTypeState(recorder, origin, state)
 				if err != nil {
 					return nil, err
 				}
@@ -486,16 +515,16 @@ func (s *Storage) UpdateObjectType(ctx context.Context, paths []string, typ *v1.
 	if err != nil {
 		return nil, err
 	}
+	s.cache.WriteCache(func(d *typetables.Database) {
+		d.OnEvents(recorder.changes)
+	})
 	return n, nil
 }
 
-func (s *Storage) updateObjectTypeDescription(ctx context.Context, tx *sqlx.Tx, tID int, description string) (err error) {
-	_, err = tx.ExecContext(ctx, "update object_type set description = ? where id = ?", description, tID)
-	return err
-}
-
-func (s *Storage) updateObjectTypeMetas(ctx context.Context, tx *sqlx.Tx, t *model.ObjectType, typ *v1.ObjectType) (err error) {
+func (s *Storage) updateObjectTypeMetas(ctx context.Context, tx *sqlx.Tx, recoder *EventRecordDB, t *model.ObjectType, typ *v1.ObjectType) (err error) {
+	now := time.Now()
 	var metas []*model.ObjectMeta
+
 	err = tx.SelectContext(ctx, &metas, "select * from object_meta where type_id = ?", t.ID)
 	if err != nil {
 		return
@@ -506,15 +535,23 @@ func (s *Storage) updateObjectTypeMetas(ctx context.Context, tx *sqlx.Tx, t *mod
 		if m == nil {
 			if meta.DeleteTime == nil {
 				// delete meta
-				_, err = tx.ExecContext(ctx, "update object_meta set delete_time = now() where id = ?", meta.ID)
+				meta.DeleteTime = &now
+				err = recoder.UpdateObjectMeta(meta)
+				if err != nil {
+					return err
+				}
 			}
 			continue
 		}
 		originMetas[meta.Name] = meta
 		if meta.Description != m.Description || meta.ValueType != int(m.ValueType) {
 			// update meta
-			_, err = tx.ExecContext(ctx, "update object_meta set delete_time = null, description = ?, value_type = ? where id = ?",
-				m.Description, m.ValueType, meta.ID)
+			meta.Description = m.Description
+			meta.ValueType = int(m.ValueType)
+			err = recoder.UpdateObjectMeta(meta)
+			if err != nil {
+				return err
+			}
 			continue
 		}
 	}
@@ -525,8 +562,14 @@ func (s *Storage) updateObjectTypeMetas(ctx context.Context, tx *sqlx.Tx, t *mod
 		_, ok := originMetas[name]
 		if !ok {
 			// create meta
-			_, err = tx.ExecContext(ctx, "insert into object_meta(type_id, name, value_type, description, create_time) VALUES (?,?,?,?,now())",
-				t.ID, meta.Name, meta.ValueType, meta.Description)
+			m := &model.ObjectMeta{
+				TypeID:      t.ID,
+				Name:        meta.Name,
+				ValueType:   int(meta.ValueType),
+				Description: meta.Description,
+				CreateTime:  now,
+			}
+			err := recoder.InsertObjectMeta(m)
 			if err != nil {
 				return err
 			}
@@ -535,7 +578,8 @@ func (s *Storage) updateObjectTypeMetas(ctx context.Context, tx *sqlx.Tx, t *mod
 	return nil
 }
 
-func (s *Storage) updateObjectTypeMeta(ctx context.Context, tx *sqlx.Tx, t *model.ObjectType, meta *v1.ObjectMeta) (err error) {
+func (s *Storage) updateObjectTypeMeta(ctx context.Context, tx *sqlx.Tx, recoder *EventRecordDB, t *model.ObjectType, meta *v1.ObjectMeta) (err error) {
+	now := time.Now()
 	var m = &model.ObjectMeta{}
 	err = tx.GetContext(ctx, m, "select * from object_meta where type_id = ? and name = ?", t.ID, meta.Name)
 	if err == sql.ErrNoRows {
@@ -549,20 +593,26 @@ func (s *Storage) updateObjectTypeMeta(ctx context.Context, tx *sqlx.Tx, t *mode
 			// do nothing
 			return nil
 		}
-		_, err = tx.ExecContext(ctx, "update object_meta set delete_time = now() where id = ?", m.ID)
-		return
+		m.DeleteTime = &now
+		err = recoder.UpdateObjectMeta(m)
+		return err
 	}
 	if m.ID == 0 {
 		// create meta
-		_, err = tx.ExecContext(ctx, "insert into object_meta(type_id, name, value_type, description, create_time) VALUES (?,?,?,?,now())",
-			t.ID, meta.Name, meta.ValueType, meta.Description)
+		m.TypeID = t.ID
+		m.Name = meta.Name
+		m.ValueType = int(meta.ValueType)
+		m.Description = meta.Description
+		err = recoder.InsertObjectMeta(m)
+		return err
 	}
-	_, err = tx.ExecContext(ctx, "update object_meta set delete_time = null, description = ?, value_type = ? where id = ?",
-		meta.Description, meta.ValueType, m.ID)
-	return
+	m.ValueType = int(meta.ValueType)
+	m.Description = meta.Description
+	m.DeleteTime = nil
+	return recoder.UpdateObjectMeta(m)
 }
 
-func (s *Storage) updateObjectTypeMetaField(ctx context.Context, tx *sqlx.Tx, t *model.ObjectType, meta *v1.ObjectMeta, field string) (err error) {
+func (s *Storage) updateObjectTypeMetaField(ctx context.Context, tx *sqlx.Tx, recorder *EventRecordDB, t *model.ObjectType, meta *v1.ObjectMeta, field string) (err error) {
 	if meta == nil {
 		return
 	}
@@ -577,13 +627,15 @@ func (s *Storage) updateObjectTypeMetaField(ctx context.Context, tx *sqlx.Tx, t 
 	}
 	switch field {
 	case "description":
-		_, err = tx.ExecContext(ctx, "update object_meta set description = ? where id = ?",
-			meta.Description, m.ID)
+		m.DeleteTime = nil
+		m.Description = meta.Description
+		return recorder.UpdateObjectMeta(m)
 	case "value_type":
-		_, err = tx.ExecContext(ctx, "update object_meta set description = ?, value_type = ? where id = ?",
-			meta.ValueType, m.ID)
+		m.DeleteTime = nil
+		m.ValueType = int(meta.ValueType)
+		return recorder.UpdateObjectMeta(m)
 	}
-	return err
+	return nil
 }
 
 func (s *Storage) loadStatuses(ctx context.Context, tx *sqlx.Tx, typeID int) (namedStatus map[string]*model.ObjectStatus, err error) {
@@ -615,14 +667,15 @@ func (s *Storage) loadStatuses(ctx context.Context, tx *sqlx.Tx, typeID int) (na
 	return
 }
 
-func (s *Storage) updateObjectTypeStatues(ctx context.Context, tx *sqlx.Tx, tID int, updateStatuses map[string]*v1.ObjectStatus) (err error) {
+func (s *Storage) updateObjectTypeStatues(ctx context.Context, tx *sqlx.Tx, recorder *EventRecordDB, tID int, updateStatuses map[string]*v1.ObjectStatus) (err error) {
+	now := time.Now()
 	namedStatus, err := s.loadStatuses(ctx, tx, tID)
 	for _, status := range updateStatuses {
 		origin := namedStatus[status.Name]
 		if origin == nil {
 			if status != nil {
 				// insert status all
-				err = s.InsertAllObjectTypeStatus(ctx, tx, status, tID)
+				err = s.InsertAllObjectTypeStatus(recorder, status, tID, now)
 				if err != nil {
 					return
 				}
@@ -633,14 +686,15 @@ func (s *Storage) updateObjectTypeStatues(ctx context.Context, tx *sqlx.Tx, tID 
 		if status == nil {
 			if origin.DeleteTime == nil {
 				// delete status
-				err = s.deleteObjectTypeStatus(ctx, tx, origin)
+				origin.DeleteTime = &now
+				err = recorder.UpdateObjectStatus(origin)
 				if err != nil {
 					return err
 				}
 			}
 			continue
 		}
-		err = s.updateObjectTypeStatus(ctx, tx, origin, status)
+		err = s.updateObjectTypeStatus(recorder, origin, status)
 		if err != nil {
 			return err
 		}
@@ -649,7 +703,7 @@ func (s *Storage) updateObjectTypeStatues(ctx context.Context, tx *sqlx.Tx, tID 
 		_, ok := updateStatuses[status.Name]
 		if !ok {
 			// delete status
-			err = s.deleteObjectTypeStatus(ctx, tx, status)
+			err = s.deleteObjectTypeStatus(recorder, status)
 			if err != nil {
 				return err
 			}
@@ -679,41 +733,41 @@ func (s *Storage) getObjectTypeStatus(ctx context.Context, tx *sqlx.Tx, typID in
 	return status, nil
 }
 
-func (s *Storage) deleteObjectTypeStatus(ctx context.Context, tx *sqlx.Tx, status *model.ObjectStatus) (err error) {
-	_, err = tx.ExecContext(ctx, "update object_status set delete_time = now() where id = ?", status.ID)
-	return err
+func (s *Storage) deleteObjectTypeStatus(recorder *EventRecordDB, status *model.ObjectStatus) (err error) {
+	now := time.Now()
+	status.DeleteTime = &now
+	return recorder.UpdateObjectStatus(status)
 }
 
-func (s *Storage) updateObjectTypeStatus(ctx context.Context, tx *sqlx.Tx, origin *model.ObjectStatus, status *v1.ObjectStatus) (err error) {
-	err = s.updateObjectTypeStatusDescription(ctx, tx, origin, status)
+func (s *Storage) updateObjectTypeStatus(recorder *EventRecordDB, origin *model.ObjectStatus, status *v1.ObjectStatus) (err error) {
+
+	err = s.updateObjectTypeStatusDescription(recorder, origin, status)
 	if err != nil {
 		return err
 	}
-	return s.updateObjectTypeStatusStates(ctx, tx, origin, status)
+	return s.updateObjectTypeStatusStates(recorder, origin, status)
 }
 
-func (s *Storage) updateObjectTypeStatusDescription(ctx context.Context, tx *sqlx.Tx, origin *model.ObjectStatus, status *v1.ObjectStatus) (err error) {
+func (s *Storage) updateObjectTypeStatusDescription(recorder *EventRecordDB, origin *model.ObjectStatus, status *v1.ObjectStatus) (err error) {
 	if origin.Description != status.Description {
-		_, err = tx.ExecContext(ctx, "update object_status set description = ? , delete_time = null where id = ?", origin.ID)
-		if err != nil {
-			return err
-		}
+		origin.Description = status.Description
+		return recorder.UpdateObjectStatus(origin)
 	}
 	return
 }
 
-func (s *Storage) updateObjectTypeStatusStates(ctx context.Context, tx *sqlx.Tx, origin *model.ObjectStatus, status *v1.ObjectStatus) (err error) {
+func (s *Storage) updateObjectTypeStatusStates(recorder *EventRecordDB, origin *model.ObjectStatus, status *v1.ObjectStatus) (err error) {
 	for _, origin := range origin.States {
 		state, ok := status.States[origin.Name]
 		if !ok || state == nil {
 			// delete state
-			err = s.deleteObjectTypeState(ctx, tx, origin)
+			err = s.deleteObjectTypeState(recorder, origin)
 			if err != nil {
 				return
 			}
 			continue
 		}
-		err = s.updateObjectTypeState(ctx, tx, origin, state)
+		err = s.updateObjectTypeState(recorder, origin, state)
 		if err != nil {
 			return
 		}
@@ -721,7 +775,7 @@ func (s *Storage) updateObjectTypeStatusStates(ctx context.Context, tx *sqlx.Tx,
 	for _, state := range status.States {
 		_, ok := origin.States[state.Name]
 		if !ok {
-			err = s.insertObjectTypeState(ctx, tx, origin.ID, state)
+			err = s.insertObjectTypeState(recorder, origin.ID, state)
 			if err != nil {
 				return
 			}
@@ -730,20 +784,21 @@ func (s *Storage) updateObjectTypeStatusStates(ctx context.Context, tx *sqlx.Tx,
 	return nil
 }
 
-func (s *Storage) deleteObjectTypeStateByName(ctx context.Context, tx *sqlx.Tx, statusName string, stateName string) (err error) {
-	state, err := s.getObjectTypeState(ctx, tx, statusName, stateName)
+func (s *Storage) deleteObjectTypeStateByName(recorder *EventRecordDB, statusName string, stateName string) (err error) {
+	state, err := s.getObjectTypeState(recorder.ctx, recorder.tx, statusName, stateName)
 	if err == sql.ErrNoRows {
 		return nil
 	}
-	return s.deleteObjectTypeState(ctx, tx, state)
+	return s.deleteObjectTypeState(recorder, state)
 }
 
-func (s *Storage) deleteObjectTypeState(ctx context.Context, tx *sqlx.Tx, state *model.ObjectState) (err error) {
+func (s *Storage) deleteObjectTypeState(recorder *EventRecordDB, state *model.ObjectState) (err error) {
 	if state.DeleteTime != nil {
 		return nil
 	}
-	_, err = tx.ExecContext(ctx, "update object_state set delete_time = now() where id = ?", state.ID)
-	return err
+	now := time.Now()
+	state.DeleteTime = &now
+	return recorder.UpdateObjectState(state)
 }
 
 func (s *Storage) getObjectTypeState(ctx context.Context, tx *sqlx.Tx, statusName string, stateName string) (_ *model.ObjectState, err error) {
@@ -755,14 +810,19 @@ func (s *Storage) getObjectTypeState(ctx context.Context, tx *sqlx.Tx, statusNam
 	return &state, nil
 }
 
-func (s *Storage) updateObjectTypeState(ctx context.Context, tx *sqlx.Tx, origin *model.ObjectState, state *v1.ObjectState) (err error) {
+func (s *Storage) updateObjectTypeState(recorder *EventRecordDB, origin *model.ObjectState, state *v1.ObjectState) (err error) {
 	if origin.Description != state.Description {
-		_, err = tx.ExecContext(ctx, "update object_state set description = ? , delete_time = null  where id = ? ", state.Description, origin.ID)
+		origin.Description = state.Description
+		return recorder.UpdateObjectState(origin)
 	}
 	return
 }
 
-func (s *Storage) insertObjectTypeState(ctx context.Context, tx *sqlx.Tx, statusID int, state *v1.ObjectState) (err error) {
-	_, err = tx.ExecContext(ctx, "insert into object_state (status_id, name, description, create_time) VALUES (?,?,?,now())", statusID, state.Name, state.Description)
-	return
+func (s *Storage) insertObjectTypeState(recoder *EventRecordDB, statusID int, state *v1.ObjectState) (err error) {
+	return recoder.InsertObjectState(&model.ObjectState{
+		StatusID:    statusID,
+		Name:        state.Name,
+		Description: state.Description,
+		CreateTime:  time.Now(),
+	})
 }

@@ -31,7 +31,6 @@ type Consumer struct {
 }
 
 func (c *Consumer) Consume(key []byte, value []byte) error {
-	log.Infof("msg: %s", string(key))
 	batchDecoder, err := codec.NewJSONEventBatchDecoder(key, value)
 	if err != nil {
 		log.Errorf("create decoder: %s", err)
@@ -53,7 +52,14 @@ func (c *Consumer) Consume(key []byte, value []byte) error {
 				log.Errorf("MqMessageTypeRow: %s", err)
 				return err
 			}
+			log.Debugf("%v", row)
 			obj, err := Convert(row)
+			if err != nil {
+				panic(err)
+			}
+			if c.transactions == nil {
+				c.transactions = map[uint64][]*Event{}
+			}
 			events := c.transactions[row.CommitTs]
 			var typ cdc.EventType = cdc.Update
 			if row.Delete {
@@ -64,18 +70,22 @@ func (c *Consumer) Consume(key []byte, value []byte) error {
 				Object: obj,
 				Type:   typ,
 			})
-			log.Debugf("%s: %s", typ, obj)
+			c.transactions[row.CommitTs] = events
+			log.Debugf("%s: %v", typ, obj)
 		case cmodel.MqMessageTypeResolved:
-			ts, err := batchDecoder.NextResolvedEvent()
+			_, err := batchDecoder.NextResolvedEvent()
 			if err != nil {
-				log.Infof("MqMessageTypeResolved: %s", err)
+				log.Errorf("MqMessageTypeResolved: %s", err)
 				return err
 			}
-			log.Infof("resolve: %d", ts)
 			for _, events := range c.transactions {
 				c.handleTransaction(events)
 			}
 			c.transactions = nil
+		case cmodel.MqMessageTypeDDL:
+			_, _ = batchDecoder.NextDDLEvent()
+		case cmodel.MqMessageTypeUnknow:
+
 		}
 	}
 	return nil

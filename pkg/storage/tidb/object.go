@@ -41,7 +41,6 @@ func (s *Storage) CreateObject(ctx context.Context, obj *v1.Object) (n *v1.Objec
 	var metas = map[string]model.ObjectMeta{}
 
 	typID, statusID, stateID, metas, err = s.getType(obj)
-
 	if err != nil {
 		return nil, err
 	}
