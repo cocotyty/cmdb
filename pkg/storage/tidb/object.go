@@ -15,6 +15,7 @@ package tidb
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -40,7 +41,6 @@ func (s *Storage) CreateObject(ctx context.Context, obj *v1.Object) (n *v1.Objec
 	var metas = map[string]model.ObjectMeta{}
 
 	typID, statusID, stateID, metas, err = s.getType(obj)
-
 	if err != nil {
 		return nil, err
 	}
@@ -88,11 +88,14 @@ func (s *Storage) getObject(ctx context.Context, tx *sqlx.Tx, typeID int, name s
 	obj = &model.Object{}
 	err = tx.GetContext(ctx, obj, "select * from object where type_id = ? and name = ? limit 1", typeID, name)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil, notFound("no such object: %s", name)
+		}
 		return nil, nil, err
 	}
 	err = tx.SelectContext(ctx, &metas, "select * from object_meta_value where object_id = ? and delete_time is null", obj.ID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, internalError(err)
 	}
 	return obj, metas, nil
 }
@@ -323,7 +326,7 @@ func (s *Storage) UpdateObject(ctx context.Context, option storage.ObjectUpdateO
 	return obj, nil
 }
 
-func (s *Storage) ListObjects(ctx context.Context, request *v1.ObjectListRequest) (resp *v1.ObjectListResponse, err error) {
+func (s *Storage) ListObjects(ctx context.Context, request *v1.ListObjectRequest) (resp *v1.ListObjectResponse, err error) {
 	tx, err := s.db.Beginx()
 	if err != nil {
 		return
@@ -351,12 +354,17 @@ func (s *Storage) ListObjects(ctx context.Context, request *v1.ObjectListRequest
 		if err != nil {
 			return nil, err
 		}
-		sql, args, err := selector.QuerySQL(nameMetas)
-		sql = "select * from object where id in (" + sql + ")"
-		if !request.ShowDeleted {
-			sql += " and delete_time is null"
+		querySQL, args, err := selector.QuerySQL(nameMetas)
+		if querySQL == "" {
+			querySQL = "select * from object where type_id = ?"
+			args = append(args, objectType.ID)
+		} else {
+			querySQL = "select * from object where id in (" + querySQL + ")"
 		}
-		err = tx.SelectContext(ctx, &objects, sql+" order by id desc", args...)
+		if !request.ShowDeleted {
+			querySQL += " and delete_time is null"
+		}
+		err = tx.SelectContext(ctx, &objects, querySQL+" order by id desc", args...)
 		if err != nil {
 			return nil, err
 		}
@@ -371,7 +379,7 @@ func (s *Storage) ListObjects(ctx context.Context, request *v1.ObjectListRequest
 		}
 	}
 	var idList = make([]int, 0, len(objects))
-	resp = &v1.ObjectListResponse{
+	resp = &v1.ListObjectResponse{
 		Kind: "cmdb#objectList",
 	}
 	var objectMap = map[int]*v1.Object{}
@@ -434,7 +442,7 @@ func (s *Storage) ListObjects(ctx context.Context, request *v1.ObjectListRequest
 }
 
 func (s *Storage) StopWatchObjects(ctx context.Context, typ string, f storage.FilterWatcher) error {
-	objects, err := s.cache.GetObjectsCache(ctx, typ)
+	objects, err := s.cache.GetObjects(ctx, typ)
 	if err != nil {
 		return err
 	}
@@ -443,11 +451,14 @@ func (s *Storage) StopWatchObjects(ctx context.Context, typ string, f storage.Fi
 }
 
 func (s *Storage) WatchObjects(ctx context.Context, typ string, f storage.FilterWatcher) error {
-	objects, err := s.cache.GetObjectsCache(ctx, typ)
+	objects, err := s.cache.GetObjects(ctx, typ)
 	if err != nil {
 		return err
 	}
-	objects.AddFilterWatcher(f)
+	err = objects.AddFilterWatcher(f)
+	if err != nil {
+		return unavailable("cache miss")
+	}
 	<-ctx.Done()
 	objects.RemoveFilterWatcher(f)
 	return nil

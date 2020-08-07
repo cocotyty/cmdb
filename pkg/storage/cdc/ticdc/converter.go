@@ -11,12 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tidb_kafka
+package ticdc
 
 import (
 	"errors"
 	"reflect"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/cocotyty/forceset"
@@ -103,12 +104,28 @@ func (c *converter) Convert(event *cmodel.RowChangedEvent) (row interface{}, err
 			continue
 		}
 		f := st.Field(index)
-		err := forceset.ForceSet(f, column.Value)
+		err := forceset.ForceSet(f, column.Value, convertOpt)
 		if err != nil {
 			return nil, err
 		}
 	}
 	return o.Interface(), nil
+}
+
+var convertOpt = func(opt *forceset.SetOption) {
+	opt.Tag = "db"
+	opt.Mappers[forceset.MapperType{
+		Destination: reflect.TypeOf(time.Time{}),
+		Source:      reflect.TypeOf(""),
+	}] = func(dst reflect.Value, src reflect.Value, _ string) error {
+		fmt := "2006-01-02 15:04:05"
+		parse, err := time.Parse(fmt, src.Interface().(string))
+		if err != nil {
+			return err
+		}
+		dst.Set(reflect.ValueOf(parse))
+		return nil
+	}
 }
 
 func toSnake(name string) string {

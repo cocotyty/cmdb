@@ -15,6 +15,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 	"net/http"
 	"os"
@@ -30,6 +31,7 @@ import (
 	"github.com/zhihu/cmdb/pkg/storage/cdc"
 	_ "github.com/zhihu/cmdb/pkg/storage/cdc/mysql-kafka"
 	_ "github.com/zhihu/cmdb/pkg/storage/cdc/tidb-kafka"
+	_ "github.com/zhihu/cmdb/pkg/storage/cdc/tidb-pulsar"
 	"github.com/zhihu/cmdb/pkg/tools/database"
 	"github.com/zhihu/cmdb/pkg/tools/grpcserver"
 	"github.com/zhihu/cmdb/pkg/tools/httpserver"
@@ -156,7 +158,11 @@ func Run(ctx context.Context, app AppConf) error {
 	httpL := cm.Match(cmux.HTTP1Fast())
 
 	// create grpc server
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.ChainUnaryInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+		resp, err = handler(ctx, req)
+		log.Debugf("%s", info.FullMethod)
+		return
+	}))
 	// create grpc-gateway server
 	gateway := runtime.NewServeMux(runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{OrigName: true, EmitDefaults: true}))
 
@@ -179,12 +185,18 @@ func Run(ctx context.Context, app AppConf) error {
 			writer.Header().Set("Content-Type", "application/json")
 			_, _ = writer.Write([]byte(v1.Swagger()))
 		})
+		m.HandleFunc("/_server/cache/states", func(writer http.ResponseWriter, request *http.Request) {
+			data, _ := json.Marshal(srv.Cache.States())
+			writer.Header().Set("Content-Type", "application/json")
+			_, _ = writer.Write(data)
+		})
 		// support CORS requests
 		m.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 			writer.Header().Set("Access-Control-Allow-Origin", "*")
 			// grpc-gateway serve
 			gateway.ServeHTTP(writer, request)
 		})
+
 		return httpserver.Run(ctx, httpL, m)
 	})
 

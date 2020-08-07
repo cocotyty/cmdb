@@ -54,6 +54,12 @@ func (c *Types) Read(fn func(d *typetables.Database)) {
 	fn(&c.database)
 }
 
+func (c *Types) Write(fn func(d *typetables.Database)) {
+	c.locker.Lock()
+	defer c.locker.Unlock()
+	fn(&c.database)
+}
+
 func (c *Types) InitData(ctx context.Context, db *sqlx.DB) (err error) {
 	tx, err := db.Beginx()
 	if err != nil {
@@ -64,6 +70,8 @@ func (c *Types) InitData(ctx context.Context, db *sqlx.DB) (err error) {
 	var status []*model.ObjectStatus
 	var state []*model.ObjectState
 	var meta []*model.ObjectMeta
+	var relations []*model.ObjectRelationType
+	var relationMetas []*model.ObjectRelationMeta
 	err = tx.SelectContext(ctx, &types, `select * from object_type where delete_time is null`)
 	if err != nil {
 		return err
@@ -77,6 +85,15 @@ func (c *Types) InitData(ctx context.Context, db *sqlx.DB) (err error) {
 		return err
 	}
 	err = tx.SelectContext(ctx, &meta, `select * from object_meta where delete_time is null`)
+	if err != nil {
+		return err
+	}
+	err = tx.SelectContext(ctx, &relations, `select * from object_relation_type where delete_time is null`)
+	if err != nil {
+		return err
+	}
+
+	err = tx.SelectContext(ctx, &relationMetas, `select * from object_relation_meta where delete_time is null`)
 	if err != nil {
 		return err
 	}
@@ -97,6 +114,12 @@ func (c *Types) InitData(ctx context.Context, db *sqlx.DB) (err error) {
 	}
 	for _, row := range meta {
 		c.database.InsertObjectMeta(row)
+	}
+	for _, row := range relations {
+		c.database.InsertObjectRelationType(row)
+	}
+	for _, row := range relationMetas {
+		c.database.InsertObjectRelationMeta(row)
 	}
 	for _, events := range c.bufferedEvents {
 		c.database.OnEvents(events)

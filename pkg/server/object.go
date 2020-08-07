@@ -22,6 +22,8 @@ import (
 	"github.com/zhihu/cmdb/pkg/query"
 	"github.com/zhihu/cmdb/pkg/storage"
 	"github.com/zhihu/cmdb/pkg/storage/cdc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var log = loggo.GetLogger("server")
@@ -30,14 +32,44 @@ type Objects struct {
 	Storage storage.Storage
 }
 
-func (o *Objects) Delete(ctx context.Context, request *v1.ObjectDeleteRequest) (*v1.Object, error) {
-	panic("implement me")
+func (o *Objects) Relations(ctx context.Context, request *v1.GetObjectRequest) (*v1.ListRelationResponse, error) {
+	relations, err := o.Storage.ListObjectRelations(ctx, &v1.ObjectReference{
+		Type: request.Type,
+		Name: request.Name,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &v1.ListRelationResponse{Relations: relations}, nil
+}
+
+func (o *Objects) Delete(ctx context.Context, request *v1.DeleteObjectRequest) (*v1.Object, error) {
+	object, err := o.Storage.DeleteObject(ctx, request.Type, request.Name)
+	return object, err
 }
 
 func (o *Objects) Update(ctx context.Context, request *v1.ObjectUpdateRequest) (*v1.Object, error) {
+	if request.Object == nil {
+		return nil, status.New(codes.InvalidArgument, "object must not be empty").Err()
+	}
+	request.Object = v1.CheckObject(request.Object)
+
 	action := storage.ObjectUpdateOption{}
 	var updateMetas = map[string]*v1.ObjectMetaValue{}
-	for _, path := range request.UpdateMask.Paths {
+	var paths []string
+	if request.UpdateMask != nil {
+		paths = request.UpdateMask.Paths
+	}
+	if len(paths) == 0 {
+		action = storage.ObjectUpdateOption{
+			SetStatus:      true,
+			SetState:       true,
+			SetDescription: true,
+			SetAllMeta:     true,
+			MatchVersion:   request.MatchVersion,
+		}
+	}
+	for _, path := range paths {
 		var names = strings.Split(path, ".")
 		if len(names) == 0 {
 			continue
@@ -64,11 +96,11 @@ func (o *Objects) Update(ctx context.Context, request *v1.ObjectUpdateRequest) (
 	return o.Storage.UpdateObject(ctx, action, request.Object)
 }
 
-func (o *Objects) Get(ctx context.Context, request *v1.ObjectGetRequest) (*v1.Object, error) {
+func (o *Objects) Get(ctx context.Context, request *v1.GetObjectRequest) (*v1.Object, error) {
 	return o.Storage.GetObject(ctx, request.Type, request.Name)
 }
 
-func (o *Objects) Watch(request *v1.ObjectListRequest, server v1.Objects_WatchServer) error {
+func (o *Objects) Watch(request *v1.ListObjectRequest, server v1.Objects_WatchServer) error {
 	f := &FilterWatcher{
 		server: server,
 	}
@@ -88,7 +120,7 @@ type FilterWatcher struct {
 }
 
 func (f *FilterWatcher) OnInit(objects []*v1.Object) {
-	_ = f.server.Send(&v1.ObjectWatchEvent{
+	_ = f.server.Send(&v1.ObjectEvent{
 		Objects: objects,
 		Type:    v1.WatchEventType_INIT,
 	})
@@ -102,7 +134,7 @@ func (f *FilterWatcher) Filter(object *v1.Object) bool {
 }
 
 func (f *FilterWatcher) OnEvent(event storage.ObjectEvent) {
-	evt := &v1.ObjectWatchEvent{
+	evt := &v1.ObjectEvent{
 		Objects: []*v1.Object{event.Object},
 	}
 	switch event.Event {
@@ -117,10 +149,11 @@ func (f *FilterWatcher) OnEvent(event storage.ObjectEvent) {
 }
 
 func (o *Objects) Create(ctx context.Context, object *v1.Object) (*v1.Object, error) {
+	object = v1.CheckObject(object)
 	n, err := o.Storage.CreateObject(ctx, object)
 	return n, err
 }
 
-func (o *Objects) List(ctx context.Context, request *v1.ObjectListRequest) (*v1.ObjectListResponse, error) {
+func (o *Objects) List(ctx context.Context, request *v1.ListObjectRequest) (*v1.ListObjectResponse, error) {
 	return o.Storage.ListObjects(ctx, request)
 }

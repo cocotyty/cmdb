@@ -182,6 +182,7 @@ func(d *Database)Init(){
 	if !ok{
 	return false
 	}
+	noop(richRow)
     {{/* delete from all index:*/}}
     {{- range $name,$index :=  $table.Indexes -}}
         {{/** block to avoid variable names conflict */}}

@@ -389,6 +389,9 @@ func (s *Selector) QuerySQL(metas map[string]*model.ObjectMeta) (sql string, arg
 		}
 	}
 	buf := bytes.NewBuffer(nil)
+	if len(conditions) == 0 {
+		return "", nil, nil
+	}
 	for i, c := range conditions {
 		args = append(args, c.args...)
 		if i != len(conditions)-1 {

@@ -17,6 +17,8 @@ RUN go get -u github.com/google/gops \
 	&& go get -u github.com/google/wire/cmd/wire \
 	&& mv $GOPATH/bin/gops /bin/gops
 
+RUN go get -u github.com/go-bindata/go-bindata/...
+
 WORKDIR /app/cmdb
 COPY . /app/cmdb
 ENV CGO_ENABLED=0

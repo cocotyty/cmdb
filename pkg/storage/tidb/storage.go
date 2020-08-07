@@ -15,7 +15,6 @@ package tidb
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -30,11 +29,11 @@ import (
 var log = loggo.GetLogger("storage")
 
 var (
-	ErrUnknownStatus      = fmt.Errorf("unknown status")
-	ErrUnknownState       = fmt.Errorf("unknown state")
-	ErrUnknownMeta        = fmt.Errorf("unknown meta")
-	ErrNoSuchType         = fmt.Errorf("no such type")
-	ErrVersionMatchFailed = fmt.Errorf("version match failed")
+	ErrUnknownStatus      = invalidArguments("unknown status")
+	ErrUnknownState       = invalidArguments("unknown state")
+	ErrUnknownMeta        = invalidArguments("unknown meta")
+	ErrNoSuchType         = invalidArguments("no such type")
+	ErrVersionMatchFailed = invalidArguments("version match failed")
 )
 
 func NewStorage(db *sqlx.DB, tsGetter storage.TimestampGetter, cache *cache.Cache) *Storage {
@@ -52,7 +51,11 @@ const GetTSTimeout = time.Millisecond * 1000
 func (s *Storage) GetTS(ctx context.Context) (ts uint64, err error) {
 	timeout, cancelFunc := context.WithTimeout(ctx, GetTSTimeout)
 	defer cancelFunc()
-	return s.tsGetter.Get(timeout)
+	ts, err = s.tsGetter.Get(timeout)
+	if err != nil {
+		return 0, internalError(err)
+	}
+	return ts, nil
 }
 
 func (s *Storage) getType(obj *v1.Object) (typID, statusID, stateID int, namedMeta map[string]model.ObjectMeta, err error) {

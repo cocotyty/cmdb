@@ -14,6 +14,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 
@@ -56,11 +57,17 @@ func(d *Database) OnEvents(transaction []cdc.Event) {
 	}
 }
 `
+
 func main() {
 	var generatePath = "../tables.gen.go"
-	tablesInfo, err := mtables.GenerateTablesInfo("table", "DeleteTime", model.ObjectType{}, model.ObjectStatus{}, model.ObjectState{}, model.ObjectMeta{})
+	tablesInfo, err := mtables.GenerateTablesInfo("table", "DeleteTime", model.ObjectType{}, model.ObjectStatus{}, model.ObjectState{}, model.ObjectMeta{}, model.ObjectRelationType{}, model.ObjectRelationMeta{})
 	if err != nil {
 		panic(err)
+	}
+	for _, table := range tablesInfo {
+		for _, index := range table.Indexes {
+			fmt.Println(table.Name, index.Name)
+		}
 	}
 	data, err := mtables.Render(tablesInfo, "typetables", mtables.Plugin{
 		Template: cdcTPL,

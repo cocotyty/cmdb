@@ -2,7 +2,9 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"sync"
+	"time"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/jmoiron/sqlx"
@@ -18,29 +20,71 @@ import (
 var log = loggo.GetLogger("cache")
 
 type Objects struct {
-	name           string
-	id             int
-	loaded         bool
-	memory         objects.Database
-	handlers       []storage.FilterWatcher
-	typ            *Types
-	objects        map[int]*v1.Object
-	mutex          sync.RWMutex
-	bufferedEvents [][]cdc.Event
+	name            string
+	id              int
+	loaded          bool
+	memory          objects.Database
+	handlers        []storage.FilterWatcher
+	typ             *Types
+	objects         map[int]*v1.Object
+	mutex           sync.RWMutex
+	bufferedEvents  [][]cdc.Event
+	releaseCallback func()
+	ref             *ReferenceManager
 }
 
-func NewObjects(typ *Types, id int, name string) *Objects {
-	return &Objects{
-		name:    name,
-		id:      id,
-		typ:     typ,
-		objects: map[int]*v1.Object{},
-		mutex:   sync.RWMutex{},
+func NewObjects(typ *Types, id int, name string, releaseCallback func()) *Objects {
+	o := &Objects{
+		name:            name,
+		id:              id,
+		typ:             typ,
+		objects:         map[int]*v1.Object{},
+		mutex:           sync.RWMutex{},
+		releaseCallback: releaseCallback,
 	}
+	return o
+}
+
+func (t *Objects) Size() int {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	return len(t.objects)
+}
+
+func (t *Objects) StartGC() {
+	t.ref = NewReferenceManager(t.releaseCallback, time.Second*5, time.Second*10)
 }
 
 func (t *Objects) ResetBuffer() {
 	t.bufferedEvents = nil
+}
+
+func (t *Objects) Ref() bool {
+	return t.ref.Ref()
+}
+
+func (t *Objects) UnRef() {
+	t.ref.UnRef()
+}
+
+func (t *Objects) GetByID(id int) *v1.Object {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	o, ok := t.memory.ObjectTable.GetByID(id)
+	if !ok {
+		return nil
+	}
+	return t.convert(o)
+}
+
+func (t *Objects) GetByName(name string) *v1.Object {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	o, ok := t.memory.ObjectTable.GetByTypeName(t.id, name)
+	if !ok {
+		return nil
+	}
+	return t.convert(o)
 }
 
 func (t *Objects) LoadData(ctx context.Context, db *sqlx.DB) error {
@@ -87,14 +131,21 @@ func (t *Objects) RemoveFilterWatcher(f storage.FilterWatcher) {
 		}
 	}
 	t.handlers = nHandlers
+	t.ref.UnRef()
 	t.mutex.Unlock()
 }
 
-func (t *Objects) AddFilterWatcher(f storage.FilterWatcher) {
+var ErrReleased = errors.New("cache released")
+
+func (t *Objects) AddFilterWatcher(f storage.FilterWatcher) error {
 	t.mutex.Lock()
+	if !t.ref.Ref() {
+		return ErrReleased
+	}
 	t.handlers = append(t.handlers, f)
 	t.mutex.Unlock()
 	f.OnInit(t.Filter(f))
+	return nil
 }
 
 func (t *Objects) Filter(f storage.FilterWatcher) (list []*v1.Object) {
@@ -167,6 +218,8 @@ func (t *Objects) OnEvents(events []cdc.Event) {
 					continue
 				}
 				updateObjects = append(updateObjects, row.ID)
+			case cdc.Delete:
+				deleteObjects = append(deleteObjects, row.ID)
 			}
 		case *model.ObjectMetaValue:
 			needEvents = append(needEvents, event)

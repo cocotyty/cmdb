@@ -28,10 +28,12 @@ import (
 // Set provide wire's provider set
 var Set = wire.NewSet(
 	wire.Struct(new(Objects), "*"),
+	wire.Struct(new(ObjectTypes), "*"),
+	wire.Struct(new(RelationTypes), "*"),
+	wire.Struct(new(Relations), "*"),
 	wire.Struct(new(Server), "*"),
 	tidb.NewStorage,
 	pd.NewTimestampGetter,
-	wire.Struct(new(ObjectTypes), "*"),
 	wire.Bind(new(storage.Storage), new(*tidb.Storage)),
 	cdc.Build,
 	database.MySQL,

@@ -22,7 +22,7 @@ import (
 )
 
 type Storage interface {
-	ListObjects(ctx context.Context, request *v1.ObjectListRequest) (*v1.ObjectListResponse, error)
+	ListObjects(ctx context.Context, request *v1.ListObjectRequest) (*v1.ListObjectResponse, error)
 	WatchObjects(ctx context.Context, typ string, f FilterWatcher) error
 	CreateObject(ctx context.Context, obj *v1.Object) (n *v1.Object, err error)
 	DeleteObject(ctx context.Context, typ, name string) (n *v1.Object, err error)
@@ -32,9 +32,23 @@ type Storage interface {
 
 	GetObjectType(ctx context.Context, name string, consistent bool) (n *v1.ObjectType, err error)
 	CreateObjectType(ctx context.Context, typ *v1.ObjectType) (n *v1.ObjectType, err error)
-	ListObjectTypes(ctx context.Context, request *v1.ListObjectTypesRequest) (list []*v1.ObjectType, err error)
+	ListObjectTypes(ctx context.Context, consistent bool, showDeleted bool) (list []*v1.ObjectType, err error)
 	UpdateObjectType(ctx context.Context, paths []string, typ *v1.ObjectType) (n *v1.ObjectType, err error)
 	DeleteObjectType(ctx context.Context, name string) (n *v1.ObjectType, err error)
+
+	CreateRelationType(ctx context.Context, typ *v1.RelationType) (*v1.RelationType, error)
+	GetRelationType(ctx context.Context, name string, from string, to string) (*v1.RelationType, error)
+	UpdateRelationType(ctx context.Context, typ *v1.RelationType, paths []string) (*v1.RelationType, error)
+	ListRelationType(ctx context.Context, consistent bool, showDeleted bool) (list []*v1.RelationType, err error)
+	DeleteRelationType(ctx context.Context, from string, to string, name string) (*v1.RelationType, error)
+
+	CreateRelation(ctx context.Context, relation *v1.Relation) (created *v1.Relation, err error)
+	GetRelation(ctx context.Context, from *v1.ObjectReference, to *v1.ObjectReference, relationType string) (rel *v1.Relation, err error)
+	DeleteRelation(ctx context.Context, relation *v1.Relation) (updated *v1.Relation, err error)
+	UpdateRelation(ctx context.Context, relation *v1.Relation, paths []string) (updated *v1.Relation, err error)
+	ListRelations(ctx context.Context, from string, to string, relation string) (rels []*v1.Relation, err error)
+	ListObjectRelations(ctx context.Context, from *v1.ObjectReference) (relations []*v1.Relation, err error)
+	WatchRelation(ctx context.Context, from, to, relation string, f RelationFilterWatcher) error
 }
 
 type ObjectUpdateOption struct {
@@ -59,6 +73,17 @@ type FilterWatcher interface {
 	OnInit(object []*v1.Object)
 	Filter(object *v1.Object) bool
 	OnEvent(ObjectEvent)
+}
+
+type RelationFilterWatcher interface {
+	OnInit(relations []*v1.RichRelation)
+	Filter(relation *v1.RichRelation) bool
+	OnEvent(RelationEvent)
+}
+
+type RelationEvent struct {
+	Relation *v1.RichRelation
+	Event    cdc.EventType
 }
 
 type TimestampGetter interface {

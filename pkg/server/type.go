@@ -15,18 +15,26 @@ package server
 
 import (
 	"context"
-	"strings"
 
 	v1 "github.com/zhihu/cmdb/pkg/api/v1"
 	"github.com/zhihu/cmdb/pkg/storage"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ObjectTypes struct {
 	Storage storage.Storage
 }
 
+func (o *ObjectTypes) Delete(ctx context.Context, request *v1.GetObjectTypeRequest) (*v1.ObjectType, error) {
+	if request.Name == "" {
+		return nil, status.New(codes.InvalidArgument, "name should not be empty").Err()
+	}
+	return o.Storage.DeleteObjectType(ctx, request.Name)
+}
+
 func (o *ObjectTypes) List(ctx context.Context, request *v1.ListObjectTypesRequest) (*v1.ListObjectTypesResponse, error) {
-	types, err := o.Storage.ListObjectTypes(ctx, request)
+	types, err := o.Storage.ListObjectTypes(ctx, request.Consistent, request.ShowDeleted)
 	if err != nil {
 		return nil, err
 	}
@@ -42,10 +50,11 @@ func (o *ObjectTypes) Create(ctx context.Context, objectType *v1.ObjectType) (*v
 	return o.Storage.CreateObjectType(ctx, objectType)
 }
 
-func (o *ObjectTypes) Update(ctx context.Context, req *v1.ObjectTypeUpdateRequest) (*v1.ObjectType, error) {
-	for i, path := range req.UpdateMask.Paths {
-		req.UpdateMask.Paths[i] = strings.ToLower(path)
-	}
+func (o *ObjectTypes) Update(ctx context.Context, req *v1.UpdateObjectTypeRequest) (*v1.ObjectType, error) {
 	v1.CheckObjectType(req.Type)
-	return o.Storage.UpdateObjectType(ctx, req.UpdateMask.Paths, req.Type)
+	var paths []string
+	if req.UpdateMask != nil {
+		paths = req.UpdateMask.Paths
+	}
+	return o.Storage.UpdateObjectType(ctx, paths, req.Type)
 }

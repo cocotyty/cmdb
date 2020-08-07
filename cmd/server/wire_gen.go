@@ -46,9 +46,18 @@ func InitServer(ctx context.Context, dsn database.DSN, pdConf *pd.Config, name c
 	objectTypes := &server.ObjectTypes{
 		Storage: storage,
 	}
+	relationTypes := &server.RelationTypes{
+		Storage: storage,
+	}
+	relations := &server.Relations{
+		Storage: storage,
+	}
 	serverServer := &server.Server{
-		Objects:     objects,
-		ObjectTypes: objectTypes,
+		Objects:       objects,
+		ObjectTypes:   objectTypes,
+		RelationTypes: relationTypes,
+		Relations:     relations,
+		Cache:         cacheCache,
 	}
 	return serverServer, nil
 }
