@@ -59,7 +59,7 @@ func (d *EventRecordDB) InsertObjectType(typ *model.ObjectType) error {
 func (d *EventRecordDB) UpdateObjectType(typ *model.ObjectType) error {
 	_, err := d.tx.ExecContext(d.ctx,
 		"update object_type set description = ?,  delete_time = ? where id = ?",
-		typ.Name, typ.Description,
+		typ.Description,
 		typ.DeleteTime, typ.ID,
 	)
 	if err != nil {
