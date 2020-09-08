@@ -92,13 +92,16 @@ var get = &cli.Command{
 			Name:    "output",
 			Aliases: []string{"o"},
 		},
+		&cli.StringFlag{
+			Name:    "type",
+			Aliases: []string{"t"},
+		},
 	},
 	Action: func(c *cli.Context) error {
-		var args = c.Args()
-		if args.Len() == 0 {
-			return errors.New("no type name")
-		}
-		return globalClient.Get(c.Context, args.Get(0), args.Get(1))
+		var typ = c.String("type")
+		var filter = c.String("filter")
+		var o = c.String("output")
+		return globalClient.Get(c.Context, typ, filter, o)
 	},
 }
 
@@ -129,9 +132,11 @@ var getType = &cli.Command{
 			Name:    "output",
 			Aliases: []string{"o"},
 		},
+		&cli.StringFlag{Name: "name", Aliases: []string{"n"}},
 	},
 	Action: func(c *cli.Context) error {
 		var o = c.String("output")
+		var n = c.String("name")
 		format := strings.SplitN(o, ":", 2)
 		var f = &cmdbctl.Format{}
 
@@ -144,6 +149,6 @@ var getType = &cli.Command{
 			f.Type = format[0]
 			f.Arg = format[1]
 		}
-		return globalClient.GetType(c.Context, f)
+		return globalClient.GetType(c.Context, n, f)
 	},
 }

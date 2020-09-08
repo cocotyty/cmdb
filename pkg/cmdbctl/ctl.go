@@ -74,7 +74,7 @@ func (c *Client) Watch(ctx context.Context, name string) error {
 	}
 }
 
-func (c *Client) Get(ctx context.Context, name string, query string) error {
+func (c *Client) Get(ctx context.Context, name string, query string,format string) error {
 	req := &v1.ListObjectRequest{}
 	req.Type = name
 	req.Query = query
@@ -83,6 +83,47 @@ func (c *Client) Get(ctx context.Context, name string, query string) error {
 	if err != nil {
 		return err
 	}
+	m := &jsonpb.Marshaler{
+		OrigName:     false,
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "  ",
+		AnyResolver:  nil,
+	}
+	switch format {
+	case YAML:
+		var list = List{Items: []interface{}{}, Kind: "list"}
+		for _, obj := range resp.Objects {
+			var object = map[string]interface{}{}
+			data, _ := m.MarshalToString(obj)
+			json.Unmarshal([]byte(data), &object)
+			list.Items = append(list.Items, object)
+		}
+		encoder := yaml.NewEncoder(os.Stdout)
+		if len(list.Items) == 1 {
+			encoder.Encode(list.Items[0])
+		}else{
+			encoder.Encode(list.Items)
+		}
+		return nil
+	case JSON:
+		var list = List{Items: []interface{}{}, Kind: "list"}
+		for _, obj := range resp.Objects {
+			var object = map[string]interface{}{}
+			data, _ := m.MarshalToString(obj)
+			_ = json.Unmarshal([]byte(data), &object)
+			list.Items = append(list.Items, object)
+		}
+		var data []byte
+		if len(list.Items) == 1 {
+			data, _ = json.MarshalIndent(list.Items[0], "", "  ")
+		}else{
+			data, _ = json.MarshalIndent(list, "", "  ")
+		}
+		_, _ = os.Stdout.Write(data)
+		return nil
+	}
+
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 	fmt.Fprintf(w, "NAME\tSTATUS\tSTATE\tMETAS\tDESC\n")
 	for _, object := range resp.Objects {
@@ -112,13 +153,23 @@ type Format struct {
 	Arg  string
 }
 
-func (c *Client) GetType(ctx context.Context, f *Format) error {
+func (c *Client) GetType(ctx context.Context, name string, f *Format) error {
 	req := &v1.ListObjectTypesRequest{}
 	req.Consistent = true
 	resp, err := c.ObjectTypesClient.List(ctx, req)
 	if err != nil {
 		return err
 	}
+	var copied []*v1.ObjectType
+	for _, objectType := range resp.Types {
+		if name != "" && objectType.Name != name {
+			continue
+		}
+		copied = append(copied, objectType)
+	}
+
+	resp.Types = copied
+
 	switch f.Type {
 	case YAML:
 		m := &jsonpb.Marshaler{
@@ -136,7 +187,11 @@ func (c *Client) GetType(ctx context.Context, f *Format) error {
 			list.Items = append(list.Items, object)
 		}
 		encoder := yaml.NewEncoder(os.Stdout)
-		encoder.Encode(list.Items)
+		if len(list.Items) == 1 {
+			encoder.Encode(list.Items[0])
+		}else{
+			encoder.Encode(list.Items)
+		}
 		return nil
 	case JSON:
 		m := &jsonpb.Marshaler{
@@ -153,7 +208,12 @@ func (c *Client) GetType(ctx context.Context, f *Format) error {
 			_ = json.Unmarshal([]byte(data), &object)
 			list.Items = append(list.Items, object)
 		}
-		data, _ := json.MarshalIndent(list, "", "  ")
+		var data []byte
+		if len(list.Items) == 1 {
+			data, _ = json.MarshalIndent(list.Items[0], "", "  ")
+		}else{
+			data, _ = json.MarshalIndent(list, "", "  ")
+		}
 		_, _ = os.Stdout.Write(data)
 		return nil
 	}
