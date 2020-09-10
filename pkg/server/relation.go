@@ -35,6 +35,14 @@ func (r *Relations) Edges(ctx context.Context, relation *v1.Relation) (*v1.ListR
 		relation.To.Type == "" || relation.Relation == "" {
 		return nil, status.New(codes.InvalidArgument, "relation's type must not empty").Err()
 	}
+	if relation.From.Name == "_" {
+		relation.From.Name = ""
+	}
+
+	if relation.To.Name == "_" {
+		relation.To.Name = ""
+	}
+
 	relations, err := r.Storage.FindRelations(ctx, relation)
 	if err != nil {
 		return nil, err
