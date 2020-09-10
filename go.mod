@@ -11,7 +11,7 @@ require (
 	github.com/golang/protobuf v1.4.1
 	github.com/google/gops v0.3.8
 	github.com/google/wire v0.4.0
-	github.com/grpc-ecosystem/grpc-gateway v1.14.4
+	github.com/grpc-ecosystem/grpc-gateway v1.14.8
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/juju/loggo v0.0.0-20190526231331-6e530bcce5d8
 	github.com/pingcap/br v0.0.0-20200521085655-53201addd4ad // indirect
@@ -23,8 +23,8 @@ require (
 	github.com/soheilhy/cmux v0.1.4
 	github.com/urfave/cli/v2 v2.2.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	google.golang.org/genproto v0.0.0-20200430143042-b979b6f78d84
-	google.golang.org/grpc v1.29.1
+	google.golang.org/genproto v0.0.0-20200513103714-09dca8ec2884
+	google.golang.org/grpc v1.31.1
 	google.golang.org/protobuf v1.22.0
 	gopkg.in/yaml.v2 v2.2.8
 )
