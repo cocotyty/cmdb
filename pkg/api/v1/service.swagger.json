@@ -11,6 +11,82 @@
     "application/json"
   ],
   "paths": {
+    "/v1/api/edges/{from.type}/{from.name}/{relation}/{to.type}/{to.name}": {
+      "get": {
+        "summary": "all object's name can be empty,means look up all relations.\nwhen call from http request, use `_` instead of empty.",
+        "operationId": "Relations_Edges",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListRelationResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from.type",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "from.name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "relation",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "to.type",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "to.name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "create_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "update_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "delete_time",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "tags": [
+          "Relations"
+        ]
+      }
+    },
     "/v1/api/object_types": {
       "get": {
         "operationId": "ObjectTypes_List",

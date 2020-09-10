@@ -47,6 +47,7 @@ type Storage interface {
 	DeleteRelation(ctx context.Context, relation *v1.Relation) (updated *v1.Relation, err error)
 	UpdateRelation(ctx context.Context, relation *v1.Relation, paths []string) (updated *v1.Relation, err error)
 	ListRelations(ctx context.Context, from string, to string, relation string) (rels []*v1.Relation, err error)
+	FindRelations(ctx context.Context, relation *v1.Relation) (relations []*v1.Relation, err error)
 	ListObjectRelations(ctx context.Context, from *v1.ObjectReference) (relations []*v1.Relation, err error)
 	WatchRelation(ctx context.Context, from, to, relation string, f RelationFilterWatcher) error
 }

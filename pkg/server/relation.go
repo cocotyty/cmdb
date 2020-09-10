@@ -28,6 +28,20 @@ type Relations struct {
 	Storage storage.Storage
 }
 
+func (r *Relations) Edges(ctx context.Context, relation *v1.Relation) (*v1.ListRelationResponse, error) {
+	if relation.From == nil ||
+		relation.To == nil ||
+		relation.From.Type == "" ||
+		relation.To.Type == "" || relation.Relation == "" {
+		return nil, status.New(codes.InvalidArgument, "relation's type must not empty").Err()
+	}
+	relations, err := r.Storage.FindRelations(ctx, relation)
+	if err != nil {
+		return nil, err
+	}
+	return &v1.ListRelationResponse{Relations: relations}, nil
+}
+
 func (r *Relations) Watch(request *v1.WatchRelationRequest, server v1.Relations_WatchServer) error {
 	ctx := server.Context()
 	selector, err := query.Parse(request.Query)
