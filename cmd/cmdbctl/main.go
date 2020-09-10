@@ -18,7 +18,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	"github.com/juju/loggo"
 	"github.com/urfave/cli/v2"
@@ -60,6 +59,8 @@ func main() {
 		get,
 		getType,
 		apply,
+		getRel,
+		getRelType,
 	}
 
 	err := app.RunContext(ctx, os.Args)
@@ -105,6 +106,36 @@ var get = &cli.Command{
 	},
 }
 
+var getRel = &cli.Command{
+	Name:    "get-rel",
+	Aliases: []string{"gr"},
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:    "output",
+			Aliases: []string{"o"},
+		},
+		&cli.StringFlag{
+			Name:    "relation",
+			Aliases: []string{"r"},
+		},
+		&cli.StringFlag{
+			Name:    "from",
+			Aliases: []string{"f"},
+		},
+		&cli.StringFlag{
+			Name:    "to",
+			Aliases: []string{"t"},
+		},
+	},
+	Action: func(c *cli.Context) error {
+		var rel = c.String("relation")
+		var from = c.String("from")
+		var to = c.String("to")
+		var o = c.String("output")
+		return globalClient.GetRelations(c.Context, from, to, rel, o)
+	},
+}
+
 var apply = &cli.Command{
 	Name:    "apply",
 	Aliases: []string{"a"},
@@ -124,6 +155,21 @@ var apply = &cli.Command{
 	},
 }
 
+var getRelType = &cli.Command{
+	Name:    "get-rel-type",
+	Aliases: []string{"grt"},
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:    "output",
+			Aliases: []string{"o"},
+		},
+	},
+	Action: func(c *cli.Context) error {
+		var o = c.String("output")
+		return globalClient.GetRelationTypes(c.Context, o)
+	},
+}
+
 var getType = &cli.Command{
 	Name:    "get-type",
 	Aliases: []string{"gt"},
@@ -137,18 +183,6 @@ var getType = &cli.Command{
 	Action: func(c *cli.Context) error {
 		var o = c.String("output")
 		var n = c.String("name")
-		format := strings.SplitN(o, ":", 2)
-		var f = &cmdbctl.Format{}
-
-		switch len(format) {
-		case 0:
-			f.Type = "standard"
-		case 1:
-			f.Type = format[0]
-		case 2:
-			f.Type = format[0]
-			f.Arg = format[1]
-		}
-		return globalClient.GetType(c.Context, n, f)
+		return globalClient.GetType(c.Context, n, o)
 	},
 }

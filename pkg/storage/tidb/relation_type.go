@@ -52,24 +52,12 @@ func (s *Storage) CreateRelationType(ctx context.Context, typ *v1.RelationType) 
 		fromTypeID = fromType.ID
 		toTypeID = toType.ID
 	})
-
-	result, err := tx.ExecContext(ctx,
-		"insert into object_relation_type (from_type_id, to_type_id, name, description, create_time) VALUES (?,?,?,?,?)",
-		fromTypeID, toTypeID, typ.Name, typ.Description, now,
-	)
+	relationType, err := s.insertRelationType(ctx, tx, fromTypeID, toTypeID, typ.Name, typ.Description, now)
 	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
-			return nil, errors.Newf(codes.AlreadyExists, "relation %s already exist", typ.Name).Err()
-		}
-		return nil, internalError(err)
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, internalError(err)
+		return nil, err
 	}
 	for _, meta := range typ.Metas {
-		err = s.insertRelationMeta(ctx, tx, int(id), meta, now)
+		err = s.insertRelationMeta(ctx, tx, relationType.ID, meta, now)
 		if err != nil {
 			return nil, err
 		}
@@ -84,14 +72,62 @@ func (s *Storage) CreateRelationType(ctx context.Context, typ *v1.RelationType) 
 	return typ, nil
 }
 
+func (s *Storage) insertRelationType(ctx context.Context, tx *sqlx.Tx, fromTypeID int, toTypeID int, name string, description string, now time.Time) (typ *model.ObjectRelationType, err error) {
+	result, err := tx.ExecContext(ctx,
+		"insert into object_relation_type (from_type_id, to_type_id, name, description, create_time) VALUES (?,?,?,?,?)",
+		fromTypeID, toTypeID, name, description, now,
+	)
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
+			return nil, errors.Newf(codes.AlreadyExists, "relation %s already exist", name).Err()
+		}
+		return nil, internalError(err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, internalError(err)
+	}
+	typ = &model.ObjectRelationType{
+		ID:          int(id),
+		FromTypeID:  fromTypeID,
+		ToTypeID:    toTypeID,
+		Name:        name,
+		Description: description,
+		CreateTime:  now,
+		UpdateTime:  nil,
+		DeleteTime:  nil,
+	}
+	s.cache.WriteCache(func(d *typetables.Database) {
+		d.InsertObjectRelationType(typ)
+	})
+	return typ, nil
+}
+
 func (s *Storage) insertRelationMeta(ctx context.Context, tx *sqlx.Tx, typID int, meta *v1.ObjectMeta, now time.Time) error {
-	_, err := tx.ExecContext(ctx,
+	res, err := tx.ExecContext(ctx,
 		"insert into object_relation_meta (relation_type_id, name, value_type, description, create_time) VALUES (?,?,?,?,?)",
 		typID, meta.Name, meta.ValueType, meta.Description, now,
 	)
+
 	if err != nil {
 		return internalError(err)
 	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	s.cache.WriteCache(func(d *typetables.Database) {
+		d.InsertObjectRelationMeta(&model.ObjectRelationMeta{
+			ID:             int(id),
+			RelationTypeID: typID,
+			Name:           meta.Name,
+			ValueType:      int(meta.ValueType),
+			Description:    meta.Description,
+			CreateTime:     now,
+			DeleteTime:     nil,
+		})
+	})
 	return nil
 }
 
@@ -190,7 +226,7 @@ func (s *Storage) updateRelationTypeMetas(ctx context.Context, tx *sqlx.Tx, type
 		}
 		if meta == nil {
 			if exist.DeleteTime == nil {
-				err = s.deleteRelationTypeMeta(ctx, tx, exist.ID)
+				err = s.deleteRelationTypeMeta(ctx, tx, exist)
 				if err != nil {
 					return err
 				}
@@ -208,7 +244,7 @@ func (s *Storage) updateRelationTypeMetas(ctx context.Context, tx *sqlx.Tx, type
 
 	for _, meta := range originMetas {
 		if metas[meta.Name] == nil && meta.DeleteTime == nil {
-			err = s.deleteRelationTypeMeta(ctx, tx, meta.ID)
+			err = s.deleteRelationTypeMeta(ctx, tx, meta)
 			if err != nil {
 				return err
 			}
@@ -217,13 +253,23 @@ func (s *Storage) updateRelationTypeMetas(ctx context.Context, tx *sqlx.Tx, type
 	return nil
 }
 
-func (s *Storage) deleteRelationTypeMeta(ctx context.Context, tx *sqlx.Tx, metaID int) error {
-	_, err := tx.ExecContext(ctx, "update object_relation_meta set delete_time = now() where id = ?", metaID)
+func (s *Storage) deleteRelationTypeMeta(ctx context.Context, tx *sqlx.Tx, meta *model.ObjectRelationMeta) error {
+	_, err := tx.ExecContext(ctx, "update object_relation_meta set delete_time = now() where id = ?", meta.ID)
+	if err != nil {
+		return internalError(err)
+	}
+	s.cache.WriteCache(func(d *typetables.Database) {
+		d.DeleteObjectRelationMeta(meta)
+	})
 	return internalError(err)
 }
 
 func (s *Storage) updateRelationTypeMeta(ctx context.Context, tx *sqlx.Tx, typeID int, meta *v1.ObjectMeta) error {
-	_, err := tx.ExecContext(ctx, "update object_relation_meta set description = ? , value_type = ?, delete_time = null where id = ?", meta.Description, meta.ValueType, typeID)
+	_, err := tx.ExecContext(ctx, "update object_relation_meta set description = ? , value_type = ?, delete_time = null where relation_type_id = ? and name =? ", meta.Description, meta.ValueType, typeID, meta.Name)
+	if err != nil {
+		return internalError(err)
+	}
+	err = s.reloadRelationMeta(ctx, tx, typeID, meta)
 	return internalError(err)
 }
 
@@ -231,11 +277,27 @@ func (s *Storage) updateRelationTypeMetaField(ctx context.Context, tx *sqlx.Tx, 
 	var err error
 	switch field {
 	case "description":
-		_, err = tx.ExecContext(ctx, "update object_relation_meta set description = ? , delete_time = null where id = ?", meta.Description, meta.ValueType, typeID)
+		_, err = tx.ExecContext(ctx, "update object_relation_meta set description = ? , delete_time = null where relation_type_id = ? and name = ?", meta.Description, meta.ValueType, typeID, meta.Name)
 	case "value_type":
-		_, err = tx.ExecContext(ctx, "update object_relation_meta set value_type = ?, delete_time = null where id = ?", meta.Description, meta.ValueType, typeID)
+		_, err = tx.ExecContext(ctx, "update object_relation_meta set value_type = ?, delete_time = null where relation_type_id = ? and name = ?", meta.Description, meta.ValueType, typeID, typeID, meta.Name)
 	}
+	if err != nil {
+		return internalError(err)
+	}
+	err = s.reloadRelationMeta(ctx, tx, typeID, meta)
 	return internalError(err)
+}
+
+func (s *Storage) reloadRelationMeta(ctx context.Context, tx *sqlx.Tx, typeID int, meta *v1.ObjectMeta) error {
+	var row model.ObjectRelationMeta
+	err := tx.SelectContext(ctx, &row, "select * from object_relation_meta where where relation_type_id = ? and name = ?", typeID, meta.Name)
+	if err != nil {
+		return internalError(err)
+	}
+	s.cache.WriteCache(func(d *typetables.Database) {
+		d.UpdateObjectRelationMeta(&row)
+	})
+	return nil
 }
 
 func (s *Storage) getDatabaseRelationType(ctx context.Context, tx *sqlx.Tx, name string, from string, to string) (*model.ObjectRelationType, error) {

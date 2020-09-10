@@ -18,6 +18,7 @@ import (
 import (
 	_ "github.com/zhihu/cmdb/pkg/storage/cdc/mysql-kafka"
 	_ "github.com/zhihu/cmdb/pkg/storage/cdc/tidb-kafka"
+	_ "github.com/zhihu/cmdb/pkg/storage/cdc/tidb-pulsar"
 )
 
 // Injectors from wire.go:

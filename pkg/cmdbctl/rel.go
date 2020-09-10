@@ -22,34 +22,34 @@ import (
 	v1 "github.com/zhihu/cmdb/pkg/api/v1"
 )
 
-func (c *Client) GetType(ctx context.Context, name string, format string) error {
-	req := &v1.ListObjectTypesRequest{}
-	req.Consistent = true
-	resp, err := c.ObjectTypesClient.List(ctx, req)
+func (c *Client) GetRelations(ctx context.Context, from, to, relation string, format string) error {
+	req := &v1.ListRelationRequest{}
+	req.From = from
+	req.To = to
+	req.Relation = relation
+	resp, err := c.RelationsClient.List(ctx, req)
 	if err != nil {
 		return err
 	}
-	var copied []*v1.ObjectType
-	for _, objectType := range resp.Types {
-		if name != "" && objectType.Name != name {
-			continue
-		}
-		copied = append(copied, objectType)
-	}
-
-	resp.Types = copied
-
 	switch format {
 	case YAML:
-		return RenderYAML(resp.Types, true)
+		return RenderYAML(resp.Relations, true)
 	case JSON:
-		return RenderJSON(resp.Types, true)
+		return RenderJSON(resp.Relations, true)
 	}
+
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
-	_, _ = fmt.Fprintf(w, "NAME\tMETAS\tSTATUSES\tDESC\n")
-	for _, t := range resp.Types {
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", t.Name, formatMetas(t.Metas), formatStatuses(t.Statuses), maxStr(t.Description, 10))
+	_, _ = fmt.Fprintf(w, "NAME\tMETAS\n")
+
+	for _, object := range resp.Relations {
+		_, _ = fmt.Fprintf(w, "%s\t%s\n",
+			relationFmt(object.Relation, object.From.Type, object.From.Name, object.To.Type, object.To.Name),
+			formatMetaValues(object.Metas))
 	}
 	_ = w.Flush()
 	return err
+}
+
+func relationFmt(rel, from, fname, to, tname string) string {
+	return fmt.Sprintf("%s(%s/%s=>%s/%s)", rel, from, fname, to, tname)
 }

@@ -14,6 +14,7 @@
 package cmdbctl
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -22,33 +23,35 @@ import (
 	v1 "github.com/zhihu/cmdb/pkg/api/v1"
 )
 
-func (c *Client) GetType(ctx context.Context, name string, format string) error {
-	req := &v1.ListObjectTypesRequest{}
-	req.Consistent = true
-	resp, err := c.ObjectTypesClient.List(ctx, req)
+func (c *Client) Get(ctx context.Context, name string, query string, format string) error {
+	req := &v1.ListObjectRequest{}
+	req.Type = name
+	req.Query = query
+	req.View = v1.ObjectView_NORMAL
+	resp, err := c.ObjectsClient.List(ctx, req)
 	if err != nil {
 		return err
 	}
-	var copied []*v1.ObjectType
-	for _, objectType := range resp.Types {
-		if name != "" && objectType.Name != name {
-			continue
-		}
-		copied = append(copied, objectType)
-	}
-
-	resp.Types = copied
-
 	switch format {
 	case YAML:
-		return RenderYAML(resp.Types, true)
+		return RenderYAML(resp.Objects, true)
 	case JSON:
-		return RenderJSON(resp.Types, true)
+		return RenderJSON(resp.Objects, true)
 	}
+
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
-	_, _ = fmt.Fprintf(w, "NAME\tMETAS\tSTATUSES\tDESC\n")
-	for _, t := range resp.Types {
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", t.Name, formatMetas(t.Metas), formatStatuses(t.Statuses), maxStr(t.Description, 10))
+	_, _ = fmt.Fprintf(w, "NAME\tSTATUS\tSTATE\tMETAS\tDESC\n")
+	for _, object := range resp.Objects {
+		buf := bytes.NewBuffer(nil)
+		for name, value := range object.Metas {
+			if buf.Len() > 0 {
+				buf.WriteString(",")
+			}
+			buf.WriteString(name)
+			buf.WriteString(": ")
+			buf.WriteString(value.Value)
+		}
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", object.Name, object.Status, object.State, buf.String(), object.Description)
 	}
 	_ = w.Flush()
 	return err

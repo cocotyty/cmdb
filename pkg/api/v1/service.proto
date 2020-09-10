@@ -339,6 +339,15 @@ service Relations {
             get: "/v1/api/relations/{from}/{to}/{relation}"
         };
     };
+
+    // all object's name can be empty,means look up all relations.
+    // when call from http request, use `_` instead of empty.
+    rpc Edges (Relation) returns (ListRelationResponse) {
+        option (google.api.http) = {
+            get: "/v1/api/edges/{from.type}/{from.name}/{relation}/{to.type}/{to.name}"
+        };
+    }
+
     rpc Watch (WatchRelationRequest) returns (stream RelationEvent) {
         option (google.api.http) = {
             get: "/v1/api/relations/{from}/{to}/{relation}/watch"

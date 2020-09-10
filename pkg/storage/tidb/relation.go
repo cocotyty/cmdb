@@ -193,6 +193,70 @@ func (s *Storage) getRelationMetasByID(ctx context.Context, tx *sqlx.Tx, relatio
 	return values, nil
 }
 
+func (s *Storage) FindRelations(ctx context.Context, relation *v1.Relation) (relations []*v1.Relation, err error) {
+	if relation.From.Name == "" && relation.To.Name == "" {
+		return s.ListRelations(ctx, relation.From.Type, relation.To.Type, relation.Relation)
+	}
+	if relation.From.Name != "" && relation.To.Name != "" {
+		rel, err := s.GetRelation(ctx, relation.From, relation.To, relation.Relation)
+		if err != nil {
+			return nil, err
+		}
+		return []*v1.Relation{rel}, nil
+	}
+
+	var metas = map[int]*model.ObjectRelationMeta{}
+	var relType model.ObjectRelationType
+	s.cache.TypeCache(func(d *typetables.Database) {
+		fromType, ok := d.ObjectTypeTable.GetByName(relation.From.Type)
+		if !ok {
+			err = notFound("from type not found: %s", relation.From.Type)
+			return
+		}
+		toType, ok := d.ObjectTypeTable.GetByName(relation.To.Type)
+		if !ok {
+			err = notFound("to type not found: %s", relation.To.Type)
+			return
+		}
+
+		rrelType, ok := d.ObjectRelationTypeTable.GetByLogicalID(fromType.ID, toType.ID, relation.Relation)
+		if !ok {
+			err = notFound("relation type not found: %s(%s=>%s)", relation.Relation, relation.From.Type, relation.To.Type)
+			return
+		}
+		for _, meta := range rrelType.ObjectRelationMeta {
+			metas[meta.ID] = &meta.ObjectRelationMeta
+		}
+		relType = rrelType.ObjectRelationType
+	})
+	if err != nil {
+		return nil, err
+	}
+	var direction string
+	var name string
+	var typID int
+	if relation.From.Name != "" {
+		direction = FromDirection
+		name = relation.From.Name
+		typID = relType.FromTypeID
+	} else {
+		direction = ToDirection
+		name = relation.To.Name
+		typID = relType.ToTypeID
+	}
+
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return nil, internalError(err)
+	}
+	defer tx.Rollback()
+	object, _, err := s.getObject(ctx, tx, typID, name)
+	if err != nil {
+		return nil, err
+	}
+	return s.getObjectRelations(ctx, tx, &relType, metas, relation.From.Type, relation.To.Type, direction, object.ID, name)
+}
+
 func (s *Storage) ListObjectRelations(ctx context.Context, from *v1.ObjectReference) (relations []*v1.Relation, err error) {
 	var metas map[int]*model.ObjectRelationMeta
 	var relationTypes map[int]*model.ObjectRelationType
@@ -246,52 +310,97 @@ func (s *Storage) ListObjectRelations(ctx context.Context, from *v1.ObjectRefere
 	}
 
 	for _, relationType := range relationTypes {
-		var objectRelations []model.ObjectRelation
-		err = tx.SelectContext(ctx, &objectRelations, "select * from object_relation where relation_type_id = ? and from_object_id = ? and delete_time is null",
-			relationType.ID, object.ID,
-		)
+		objectRelations, err := s.getObjectRelations(ctx, tx, relationType,
+			metas,
+			from.Type,
+			objectTypes[relationType.ToTypeID], FromDirection, object.ID, object.Name)
 		if err != nil {
-			return nil, internalError(err)
+			return nil, err
 		}
-		var metaValues []*model.ObjectRelationMetaValue
-		err = tx.SelectContext(ctx, &metaValues, "select * from object_relation_meta_value where from_object_id = ? and delete_time is null", object.ID)
-		if err != nil {
-			return nil, internalError(err)
-		}
-		var relationMetaValues = map[int][]*model.ObjectRelationMetaValue{}
-		for _, value := range metaValues {
-			relationMetaValues[value.ToObjectID] = append(relationMetaValues[value.ToObjectID], value)
-		}
-		var ids []string
-		for _, relation := range objectRelations {
+		relations = append(relations, objectRelations...)
+	}
+	return relations, nil
+}
+
+const (
+	FromDirection = "from"
+	ToDirection   = "to"
+)
+
+func (s *Storage) getObjectRelations(ctx context.Context, tx *sqlx.Tx, relationType *model.ObjectRelationType, metas map[int]*model.ObjectRelationMeta, from, to string, direction string, id int, name string) (relations []*v1.Relation, err error) {
+	// find all relation related to this object:
+	var objectRelations []model.ObjectRelation
+	err = tx.SelectContext(ctx, &objectRelations, "select * from object_relation where relation_type_id = ? and "+direction+"_object_id = ? and delete_time is null",
+		relationType.ID, id,
+	)
+	if err != nil {
+		return nil, internalError(err)
+	}
+	// load all relation's meta values
+	var metaValues []*model.ObjectRelationMetaValue
+	err = tx.SelectContext(ctx, &metaValues, "select * from object_relation_meta_value where "+direction+"_object_id = ? and delete_time is null", id)
+	if err != nil {
+		return nil, internalError(err)
+	}
+	var relationMetaValues = map[int][]*model.ObjectRelationMetaValue{}
+	for _, value := range metaValues {
+		relationMetaValues[value.ToObjectID] = append(relationMetaValues[value.ToObjectID], value)
+	}
+	//
+	var ids []string
+	for _, relation := range objectRelations {
+		switch direction {
+		case FromDirection:
 			ids = append(ids, strconv.Itoa(relation.ToObjectID))
+		case ToDirection:
+			ids = append(ids, strconv.Itoa(relation.FromObjectID))
 		}
-		var objectsNames []IDName
-		err = tx.SelectContext(ctx, &objectsNames, "select id,name from object where id in ("+strings.Join(ids, ",")+")")
-		var objects = map[int]string{}
-		for _, idName := range objectsNames {
-			objects[idName.ID] = idName.Name
+	}
+	// load all relation object names
+	var objectsNames []IDName
+	err = tx.SelectContext(ctx, &objectsNames, "select id,name from object where id in ("+strings.Join(ids, ",")+")")
+	var objects = map[int]string{}
+	for _, idName := range objectsNames {
+		objects[idName.ID] = idName.Name
+	}
+
+	for _, relation := range objectRelations {
+		var rel = &v1.Relation{
+			Relation: relationType.Name,
+			Metas:    map[string]*v1.ObjectMetaValue{},
 		}
-		for _, relation := range objectRelations {
-			var rel = &v1.Relation{
-				Relation: relationType.Name,
-				From:     from,
-				To:       &v1.ObjectReference{Type: objectTypes[relationType.ToTypeID], Name: objects[relation.ToObjectID]},
-				Metas:    map[string]*v1.ObjectMetaValue{},
+		switch direction {
+		case FromDirection:
+			rel.From = &v1.ObjectReference{
+				Type: from,
+				Name: name,
 			}
-			rel.CreateTime, _ = ptypes.TimestampProto(relation.CreateTime)
-			if relation.UpdateTime != nil {
-				rel.UpdateTime, _ = ptypes.TimestampProto(*relation.UpdateTime)
+			rel.To = &v1.ObjectReference{
+				Type: to,
+				Name: objects[relation.ToObjectID],
 			}
-			if relation.DeleteTime != nil {
-				rel.DeleteTime, _ = ptypes.TimestampProto(*relation.DeleteTime)
+		case ToDirection:
+			rel.To = &v1.ObjectReference{
+				Type: to,
+				Name: name,
 			}
-			values := relationMetaValues[relation.ToObjectID]
-			for _, value := range values {
-				rel.Metas[metas[value.MetaID].Name] = &v1.ObjectMetaValue{Value: value.Value, ValueType: v1.ValueType(metas[value.MetaID].ValueType)}
+			rel.From = &v1.ObjectReference{
+				Type: from,
+				Name: objects[relation.FromObjectID],
 			}
-			relations = append(relations, rel)
 		}
+		rel.CreateTime, _ = ptypes.TimestampProto(relation.CreateTime)
+		if relation.UpdateTime != nil {
+			rel.UpdateTime, _ = ptypes.TimestampProto(*relation.UpdateTime)
+		}
+		if relation.DeleteTime != nil {
+			rel.DeleteTime, _ = ptypes.TimestampProto(*relation.DeleteTime)
+		}
+		values := relationMetaValues[relation.ToObjectID]
+		for _, value := range values {
+			rel.Metas[metas[value.MetaID].Name] = &v1.ObjectMetaValue{Value: value.Value, ValueType: v1.ValueType(metas[value.MetaID].ValueType)}
+		}
+		relations = append(relations, rel)
 	}
 	return relations, nil
 }
